@@ -257,7 +257,7 @@
 .toc-heading {
   color: var(--secondary-ink);
   font-size: var(--fs-ui);
-  font-weight: 600;
+  font-weight: var(--font-weight-medium);
 }
 .toc-desktop > .toc-heading {
   min-height: 36px;

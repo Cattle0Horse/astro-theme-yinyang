@@ -10,7 +10,7 @@
 }
 .reading :is(h1, h2, h3, h4, h5, h6) {
   margin-block: 24px 8px;
-  font-weight: 600;
+  font-weight: var(--font-weight-medium);
   line-height: 1.4;
   text-wrap: balance;
   scroll-margin-block-start: 48px;
@@ -41,7 +41,7 @@
 .reading h6 {
   font-size: var(--fs-note);
   color: var(--secondary-ink);
-  font-weight: 400;
+  font-weight: var(--font-weight-regular);
 }
 .reading :is(h1, h2, h3, h4, h5, h6) + :is(h1, h2, h3, h4, h5, h6) {
   margin-block-start: 12px;
@@ -254,7 +254,7 @@
 .code-language {
   margin-inline-end: auto;
   font-size: var(--fs-ui);
-  font-weight: 600;
+  font-weight: var(--font-weight-medium);
   color: var(--muted);
   text-transform: lowercase;
 }
