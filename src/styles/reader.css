@@ -219,19 +219,19 @@
 .reading .math-actions {
   position: absolute;
   z-index: 1;
-  inset-block-start: 50%;
+  inset-block-start: 0;
   inset-inline-end: 0;
   opacity: 0;
   pointer-events: none;
-  translate: 0 calc(-50% - 2px);
+  translate: 0 -2px;
   transition:
     opacity 160ms ease,
     translate 160ms ease;
 }
-.reading .katex-display:is(:hover, :focus-within) .math-actions {
+.reading [data-math-block] > .katex:is(:hover, :focus-within) > .math-actions {
   opacity: 1;
   pointer-events: auto;
-  translate: 0 -50%;
+  translate: 0 0;
 }
 .reading .math-actions .icon-button {
   background: transparent;
