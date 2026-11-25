@@ -466,6 +466,35 @@ test("display math reveals a ghost copy button and copies its TeX source", async
   await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(source)
 })
 
+test("formula copy stays centered after returning by link or browser history", async ({ context, page }) => {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"])
+  await page.goto("/posts/math-demo/")
+  const blog = page.getByRole("navigation", { name: "主导航" }).getByRole("link", { name: "Blog" })
+  const source = "\\sqrt{2} \\approx 1.414 \\qquad \\sqrt[3]{27} = 3"
+  const formula = page.locator(".katex-display").filter({ has: page.locator("annotation").filter({ hasText: source }) })
+
+  for (const byHistory of [false, true]) {
+    await blog.click()
+    await expect(page.getByRole("link", { name: "数学公式示例" })).toBeVisible()
+    if (byHistory) await page.goBack()
+    else await page.getByRole("link", { name: "数学公式示例" }).click()
+
+    await formula.locator(".katex-html").hover()
+    await expect(formula.locator(".math-actions")).toHaveCSS("opacity", "1")
+    const copy = formula.getByRole("button", { name: "复制公式" })
+    const icon = copy.locator(".copy-idle")
+    await expect(icon).toHaveCSS("width", "16px")
+    await expect(icon).toHaveCSS("height", "16px")
+    const box = (await copy.boundingBox())!
+    const glyph = (await icon.boundingBox())!
+    expect(glyph.x + glyph.width / 2).toBeCloseTo(box.x + box.width / 2)
+    expect(glyph.y + glyph.height / 2).toBeCloseTo(box.y + box.height / 2)
+    await copy.click()
+    await expect(copy).toHaveAttribute("data-copy-state", "success")
+    await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(source)
+  }
+})
+
 test("formula copy displays one icon when clipboard states change quickly", async ({ page }) => {
   await page.addInitScript(() => {
     Object.defineProperty(navigator.clipboard, "writeText", {

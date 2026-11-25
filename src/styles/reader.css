@@ -253,6 +253,8 @@
 /* Restore the icon styles overridden by KaTeX's descendant SVG rules. */
 .reading .math-actions svg {
   position: static;
+  width: 1rem;
+  height: 1rem;
   fill: none;
   stroke-width: 2;
   stroke-linecap: round;
