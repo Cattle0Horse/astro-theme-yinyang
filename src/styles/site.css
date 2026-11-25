@@ -1,137 +1,14 @@
 @import "tailwindcss";
 @import "katex/dist/katex.min.css";
 @import "./base.css";
+@import "../components/ui/controls.css";
+@import "../components/site-header.css";
+@import "./entries.css";
 @import "./prose.css";
 @import "./navigation.css";
 @import "./reader.css";
+@import "../components/article-toc.css";
 
 @source "../components";
 @source "../layouts";
 @source "../routes";
-
-@media (min-width: 84rem) {
-  html {
-    scrollbar-width: thin;
-  }
-  .site-name,
-  .article-title {
-    font-size: calc(var(--fs-title) + 0.5rem);
-  }
-  :root[data-js] .article .toc-desktop,
-  .article .toc-desktop {
-    display: flex;
-    flex-direction: column;
-    position: fixed;
-    top: 48px;
-    bottom: 48px;
-    right: calc((100% + var(--column)) / 2 + 32px);
-    width: min(240px, calc((100% - var(--column)) / 2 - 48px));
-    margin: 0;
-  }
-  .toc-desktop .toc-links {
-    min-height: 0;
-    overflow: auto;
-  }
-  .article .toc-open {
-    display: none;
-  }
-  .reading [data-sidenote-panel] {
-    position: absolute;
-    inset-inline-start: calc(100% + 32px);
-    inset-block-start: 0;
-    width: min(240px, calc((100vw - var(--column)) / 2 - 48px));
-  }
-  .reading [data-sidenote-panel] > section {
-    position: absolute;
-    width: 100%;
-  }
-}
-@media (max-width: 600px) {
-  .toc-dialog .toc-links a {
-    min-height: 40px;
-  }
-  .header-desktop {
-    display: none;
-  }
-  .header-menu {
-    display: block;
-  }
-  .site-header {
-    position: sticky;
-    z-index: 20;
-    inset-block-start: 0;
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: center;
-    gap: 8px;
-    padding-block: 10px;
-    background: var(--paper);
-  }
-  .site-name {
-    min-width: 0;
-    overflow: hidden;
-    font-size: calc(var(--fs-title) - 0.625rem);
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .site-description {
-    display: none;
-  }
-  .header-row {
-    min-height: 0;
-    gap: 14px;
-    margin: 0;
-  }
-  .header-row .appearance {
-    flex-wrap: nowrap;
-    gap: 0;
-  }
-  .header-row .appearance > .icon-button {
-    width: 44px;
-    height: 44px;
-  }
-  html {
-    scroll-padding-block-start: 65px;
-  }
-  .reading :is(h1, h2, h3, h4, h5, h6) {
-    scroll-margin-block-start: 0;
-  }
-}
-@media (max-width: 384px) {
-  .site-header,
-  .header-row {
-    gap: 6px;
-  }
-  .header-row .appearance > .icon-button {
-    width: 36px;
-  }
-}
-@media (max-width: 340px) {
-  .site-header,
-  .header-row {
-    gap: 4px;
-  }
-  .header-row .appearance > .icon-button {
-    width: 32px;
-  }
-  .header-menu-toggle {
-    width: 82px;
-  }
-}
-@media (max-width: 38rem) {
-  .shell {
-    width: calc(100% - 2rem);
-  }
-  .article {
-    margin-top: 1.75rem;
-  }
-  .timeline {
-    padding-top: 1.55rem;
-  }
-  .entry-line {
-    font-size: var(--fs-ui);
-  }
-  .timeline .entry-date {
-    font-size: calc(var(--fs-meta) - 0.0625rem);
-  }
-}

@@ -28,9 +28,9 @@ const currentLabel = links.find(({ current }) => current)?.label ?? "导航"
     {site.title}
   </a>
   <p class="site-description">{site.description}</p>
-  <div class="header-row flex items-center">
+  <div class="header-row flex items-center justify-between">
     <Appearance initial={initial} palettes={site.palettes} client:load />
-    <nav aria-label="主导航" class="header-desktop flex flex-wrap justify-end">
+    <nav aria-label="主导航" class="header-desktop flex shrink-0 flex-wrap justify-end">
       {links.map(({ href, label, icon: Icon, current }) => (
         <a href={href} class="header-link" aria-current={current}>
           <Icon aria-hidden="true" />

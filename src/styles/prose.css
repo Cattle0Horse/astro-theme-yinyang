@@ -330,3 +330,9 @@
 .code-fold-button:focus-visible {
   outline-offset: -2px;
 }
+
+@media (max-width: 600px) {
+  .reading :is(h1, h2, h3, h4, h5, h6) {
+    scroll-margin-block-start: 0;
+  }
+}
