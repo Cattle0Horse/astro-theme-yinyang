@@ -13,6 +13,6 @@ const { label, entries } = Astro.props
 <SiteLayout title={label}>
   <section class="shell">
     <h1 class="section-title">#{label}</h1>
-    <Timeline entries={entries} />
+    <Timeline entries={entries.map((entry) => ({ entry }))} />
   </section>
 </SiteLayout>

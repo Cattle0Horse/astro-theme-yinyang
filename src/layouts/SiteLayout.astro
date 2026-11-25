@@ -16,10 +16,10 @@ interface Props {
   image?: string
   article?: boolean
   notFound?: boolean
+  hasKatex?: boolean
 }
 
-const { title = site.title, description = site.description, image, article = false, notFound = false } = Astro.props
-const content = (await Astro.slots.render("default")) ?? ""
+const { title = site.title, description = site.description, image, article = false, notFound = false, hasKatex = false } = Astro.props
 const canonical = new URL(Astro.url.pathname, Astro.site)
 const fullTitle = title === site.title ? title : title + " · " + site.title
 const initial = { mode: "system", palette: site.defaultPalette, size: 15 } satisfies Appearance
@@ -51,7 +51,7 @@ const contentMotion = {
     <title>{fullTitle}</title>
     <meta name="description" content={description} />
     <link rel="icon" href={basePath(site.favicon)} />
-    {Astro.locals.hasKatex && <link rel="stylesheet" href={katexStyles} />}
+    {hasKatex && <link rel="stylesheet" href={katexStyles} />}
     <link rel="stylesheet" href={proseFont} media="print" onload="this.removeAttribute('media')" />
     {notFound ? <meta name="robots" content="noindex" /> : <link rel="canonical" href={canonical.href} />}
     <meta property="og:title" content={fullTitle} />
@@ -84,7 +84,7 @@ const contentMotion = {
       <span class="navigation-loading-label">正在加载…</span>
     </div>
     <main id="main" transition:name="reading-content" transition:animate={{ forwards: contentMotion, backwards: contentMotion }}>
-      <Fragment set:html={content} />
+      <slot />
     </main>
   </body>
 </html>

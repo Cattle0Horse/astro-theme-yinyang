@@ -21,15 +21,14 @@ const scope = articleScope(entry)
 const toc = entry.data.toc && !embedded ? headings.filter(({ depth, slug }) => depth >= 2 && depth <= 4 && slug !== "footnote-label" && !slug.startsWith("sidenote-")) : []
 const canonical = new URL(entryPath(entry), Astro.site)
 const article = articleMarkup((await Astro.slots.render("default")) ?? "", canonical, embedded ? scope : undefined, import.meta.env.BASE_URL)
-if (article.hasMath) Astro.locals.hasKatex = true
 ---
 
 {toc.length > 0 && <ArticleToc scope={scope} title={entryTitle(entry)} headings={toc} />}
-{article.hasReader && <ReadingActions />}
+{article.hasReadingActions && <ReadingActions />}
 <div
   id={scope}
   class="reading"
-  data-reading-actions={article.hasReader ? "" : undefined}
+  data-reading-actions={article.hasReadingActions ? "" : undefined}
   data-has-sidenotes={article.hasSidenotes ? "" : undefined}
   data-has-images={article.hasImages ? "" : undefined}
 >
@@ -56,8 +55,8 @@ if (article.hasMath) Astro.locals.hasKatex = true
   })()`}
   ></script>
 )}
-{article.hasCode && <script is:inline set:html={`(${startCodeFolds.toString()})(${animateCodeHeight.toString()})`}></script>}
+{article.hasCodeFolds && <script is:inline set:html={`(${startCodeFolds.toString()})(${animateCodeHeight.toString()})`}></script>}
 {article.hasImages && <script is:inline set:html={"(" + startImageLoading.toString() + ")()"}></script>}
-{(article.hasSidenotes || article.hasCode || article.hasImages) && <script is:inline data-astro-rerun define:vars={{ scope }}>
+{(article.hasSidenotes || article.hasCodeFolds || article.hasImages) && <script is:inline data-astro-rerun define:vars={{ scope }}>
   document.getElementById(scope)?.dispatchEvent(new Event("yinyang:reading", { bubbles: true }))
 </script>}

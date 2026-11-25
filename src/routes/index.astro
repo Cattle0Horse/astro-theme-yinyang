@@ -9,6 +9,6 @@ const posts = await published("posts")
 <SiteLayout>
   <div class="shell">
     <h1 class="sr-only">Blog</h1>
-    <Timeline entries={posts} />
+    <Timeline entries={posts.map((entry) => ({ entry }))} />
   </div>
 </SiteLayout>

@@ -6,7 +6,9 @@ import { imageCandidates, isRelativeResource } from "./resources"
 export function rehypeReading() {
   return (tree: Root, file: { data: { astro?: { frontmatter?: Record<string, unknown> } } }) => {
     const assets = new Set<string>()
+    let hasKatex = false
     const collect = ({ properties }: Element) => {
+      if (Array.isArray(properties.className) && properties.className.includes("katex")) hasKatex = true
       const candidates = typeof properties.srcSet === "string" ? imageCandidates(properties.srcSet).map(({ source }) => source.value) : []
       for (const value of [properties.src, properties.href, properties.poster, ...candidates]) {
         if (isRelativeResource(value)) assets.add(value)
@@ -18,7 +20,10 @@ export function rehypeReading() {
         visit(fromHtml(node.value, { fragment: true }), "element", collect)
       }
     })
-    if (file.data.astro?.frontmatter) file.data.astro.frontmatter.assetReferences = [...assets]
+    if (file.data.astro?.frontmatter) {
+      file.data.astro.frontmatter.assetReferences = [...assets]
+      file.data.astro.frontmatter.hasKatex = hasKatex
+    }
     visit(tree, "element", (node, index, parent) => {
       if (!parent || index === undefined) return
       const properties = node.tagName === "table" ? { className: ["table-scroll"], dataTable: "" } : node.tagName === "pre" ? { dataCodeBlock: "" } : undefined

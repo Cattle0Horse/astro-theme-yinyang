@@ -1,16 +1,19 @@
 ---
 import { dateParts, tagId } from "../lib/content-format"
 import { entryPath, entryTitle, tagsPath } from "../lib/content"
-import type { Entry } from "../lib/content"
+import type { CollectionEntry } from "astro:content"
+import type { RenderedEntry } from "../lib/entry-render"
 import EntryContent from "./EntryContent.astro"
 import NoteSources from "./NoteSources.astro"
 
+type TimelineEntry = { entry: CollectionEntry<"posts">; rendered?: never } | { entry: CollectionEntry<"notes">; rendered: RenderedEntry }
+
 interface Props {
-  entries: Entry[]
+  entries: TimelineEntry[]
 }
 
 const { entries } = Astro.props
-const datedEntries = entries.map((entry) => ({ entry, date: dateParts(entry.data.date) }))
+const datedEntries = entries.map((item) => ({ ...item, date: dateParts(item.entry.data.date) }))
 const groups = Map.groupBy(datedEntries, ({ entry, date }) => (entry.collection === "notes" ? `${date.year} / ${date.month}` : date.year))
 ---
 
@@ -19,10 +22,10 @@ const groups = Map.groupBy(datedEntries, ({ entry, date }) => (entry.collection 
   {[...groups].map(([label, group]) => (
     <section class="timeline-group">
       <h2 class="timeline-heading">{label}</h2>
-      {group.map(({ entry, date: { month, day, time } }) => {
+      {group.map(({ entry, rendered, date: { month, day, time } }) => {
         const href = entryPath(entry)
         const dateLabel = `${month}.${day}`
-        return entry.collection === "notes" ? (
+        return rendered ? (
           <article class="timeline-item note-entry" data-entry-preview={href}>
             <a class="note-entry-time" href={href}>
               <time datetime={entry.data.date} data-entry-part="time">
@@ -38,7 +41,7 @@ const groups = Map.groupBy(datedEntries, ({ entry, date }) => (entry.collection 
               </h3>
             )}
             <NoteSources source={entry.data.source} />
-            <EntryContent entry={entry} embedded />
+            <EntryContent entry={entry} rendered={rendered} embedded />
             {entry.data.note_tags.length > 0 && (
               <div class="note-tags" aria-label="标签">
                 {entry.data.note_tags.map((tag) => (

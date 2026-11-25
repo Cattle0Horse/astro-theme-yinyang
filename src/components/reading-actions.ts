@@ -1,5 +1,5 @@
-import { animateCodeHeight } from "./code-block"
-import { copyFeedbackDuration, copyStatus } from "./copy-state"
+import { animateCodeHeight } from "../lib/code-block"
+import { copyFeedbackDuration, copyStatus } from "../lib/copy-state"
 
 export function mountReadingActions(article: HTMLElement) {
   const controller = new AbortController()

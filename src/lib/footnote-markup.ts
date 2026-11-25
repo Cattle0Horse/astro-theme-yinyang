@@ -23,6 +23,21 @@ function clauseStart(text: string, end: number) {
   return start
 }
 
+export function addFootnoteMarkup(node: Element) {
+  if (node.tagName === "a") {
+    const { dataFootnoteRef, dataFootnoteBackref } = node.properties
+    if (dataFootnoteRef !== undefined || dataFootnoteBackref !== undefined) {
+      const number = node.children.map((child) => (child.type === "text" ? child.value : "")).join("")
+      const label = dataFootnoteBackref !== undefined ? "返回引用处" : "查看脚注 " + number
+      node.properties.dataTooltip = label
+      node.properties.ariaLabel = label
+    }
+  }
+  if (node.tagName === "section" && node.properties.dataFootnotes !== undefined) {
+    node.children.unshift({ type: "element", tagName: "hr", properties: {}, children: [] })
+  }
+}
+
 export function markFootnoteClauses(root: Root) {
   const parents = new Map<Element | Text, Element | Root>()
   const references: Element[] = []

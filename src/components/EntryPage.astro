@@ -5,6 +5,7 @@ import EntryContent from "./EntryContent.astro"
 import CopyText from "./CopyText"
 import { entryPath, entryTitle } from "../lib/content"
 import { articleEditUrl } from "../lib/edit-page"
+import { renderEntry } from "../lib/entry-render"
 import type { Entry } from "../lib/content"
 import { site } from "../site.config"
 import { FileCode, Pencil, Sparkles } from "lucide-react"
@@ -21,9 +22,10 @@ const description = entry.data.description || title
 const image = entry.data.cover ? new URL(entry.data.cover, new URL(href, Astro.site)).href : undefined
 const ai = entry.data.ai
 const editUrl = articleEditUrl(entry)
+const rendered = await renderEntry(entry)
 ---
 
-<SiteLayout title={title} description={description} image={image} article>
+<SiteLayout title={title} description={description} image={image} article hasKatex={rendered.hasKatex}>
   <article class="article shell" data-entry-detail={href}>
     <header class="article-heading">
       <h1 class="article-title">
@@ -53,7 +55,7 @@ const editUrl = articleEditUrl(entry)
       )}
       {entry.collection === "notes" && <NoteSources source={entry.data.source} />}
     </header>
-    <EntryContent entry={entry} />
+    <EntryContent entry={entry} rendered={rendered} />
     {editUrl && (
       <div class="article-edit">
         <hr />
