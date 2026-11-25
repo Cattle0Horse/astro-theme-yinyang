@@ -269,31 +269,42 @@ test("appearance and copy icons blend between states", async ({ context, page })
   }
 })
 
-test("copy feedback follows the latest clipboard operation", async ({ page }) => {
+test("copy buttons suppress repeat writes and extend their feedback on each click", async ({ page }) => {
   await page.addInitScript(() => {
-    let rejectOlder: ((error: Error) => void) | undefined
-    Object.defineProperty(navigator.clipboard, "write", {
-      value: () => {
-        if (rejectOlder) return Promise.resolve()
-        return new Promise<void>((_resolve, reject) => {
-          rejectOlder = reject
-          document.addEventListener("reject-first-copy", () => rejectOlder?.(new Error("Clipboard unavailable")), { once: true })
-        })
-      }
-    })
+    let writes = 0
+    const write = () =>
+      new Promise<void>((resolve) => {
+        document.body.dataset.clipboardWrites = String(++writes)
+        document.addEventListener("finish-copy", () => resolve(), { once: true })
+      })
+
+    Object.defineProperty(navigator.clipboard, "write", { value: write })
+    Object.defineProperty(navigator.clipboard, "writeText", { value: write })
   })
-  await page.goto("/posts/reading/markdown/")
-  const actions = page.getByRole("group", { name: "原文操作" })
-  const copy = actions.getByRole("button", { name: "复制正文 Markdown" })
-  await copy.click()
-  await copy.click()
-  const feedback = actions.getByRole("status")
-  await expect(feedback).toHaveText("已复制")
-  await page.evaluate(async () => {
-    document.dispatchEvent(new Event("reject-first-copy"))
-    await new Promise(requestAnimationFrame)
-  })
-  await expect(feedback).toHaveText("已复制")
+  await page.goto(article)
+  await page.clock.install()
+  const finishCopy = () => page.evaluate(() => document.dispatchEvent(new Event("finish-copy")))
+  let writes = 0
+  for (const label of ["复制正文 Markdown", "复制代码"]) {
+    const copy = page.getByRole("button", { name: label, exact: true }).first()
+    await copy.click()
+    await expect(copy).toHaveAttribute("data-copy-state", "pending")
+    await copy.click()
+    await expect(page.locator("body")).toHaveAttribute("data-clipboard-writes", String(++writes))
+    await finishCopy()
+    await expect(copy).toHaveAttribute("data-copy-state", "success")
+
+    await page.clock.runFor(950)
+    await copy.click()
+    await page.clock.runFor(1000)
+    await expect(copy).toHaveAttribute("data-copy-state", "success")
+    await expect(page.locator("body")).toHaveAttribute("data-clipboard-writes", String(writes))
+    await page.clock.runFor(850)
+    await expect(copy).not.toHaveAttribute("data-copy-state")
+    await copy.click()
+    await expect(page.locator("body")).toHaveAttribute("data-clipboard-writes", String(++writes))
+    await finishCopy()
+  }
 })
 
 test("fetches only the Markdown body when the reader copies it", async ({ page, context }) => {

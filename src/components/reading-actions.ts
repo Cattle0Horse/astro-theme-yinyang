@@ -1,42 +1,26 @@
 import { animateCodeHeight } from "../lib/code-block"
-import { copyFeedbackDuration, copyStatus } from "../lib/copy-state"
+import { copyStatus, createCopyFeedback } from "../lib/copy-state"
 
 export function mountReadingActions(article: HTMLElement) {
   const controller = new AbortController()
   const { signal } = controller
-  const pending = new WeakMap<HTMLButtonElement, number>()
-  const timers = new Map<HTMLButtonElement, number>()
+  const copyButtons = new Map<HTMLButtonElement, ReturnType<typeof createCopyFeedback>>()
   let openTable: Element | null = null
 
-  async function copy(button: HTMLButtonElement, text: string) {
-    const operation = (pending.get(button) ?? 0) + 1
-    pending.set(button, operation)
-    window.clearTimeout(timers.get(button))
-    const message = button.parentElement?.querySelector('[role="status"]')
-    button.dataset.copyState = "pending"
-    button.dataset.tooltip = copyStatus.pending
-    if (message) message.textContent = copyStatus.pending
-    let state: "success" | "error"
-    try {
-      await navigator.clipboard.writeText(text)
-      state = "success"
-    } catch {
-      state = "error"
+  function copy(button: HTMLButtonElement, text: string) {
+    let feedback = copyButtons.get(button)
+    if (!feedback) {
+      const message = button.parentElement?.querySelector('[role="status"]')
+      feedback = createCopyFeedback((state) => {
+        const status = state ? copyStatus[state] : ""
+        if (state) button.dataset.copyState = state
+        else delete button.dataset.copyState
+        button.dataset.tooltip = status || button.getAttribute("aria-label") || ""
+        if (message) message.textContent = status
+      })
+      copyButtons.set(button, feedback)
     }
-    if (signal.aborted || pending.get(button) !== operation) return
-    const status = copyStatus[state]
-    button.dataset.tooltip = status
-    button.dataset.copyState = state
-    if (message) message.textContent = status
-    timers.set(
-      button,
-      window.setTimeout(() => {
-        timers.delete(button)
-        button.dataset.tooltip = button.getAttribute("aria-label") ?? ""
-        delete button.dataset.copyState
-        if (message) message.textContent = ""
-      }, copyFeedbackDuration)
-    )
+    void feedback.copy(() => navigator.clipboard.writeText(text))
   }
 
   article.addEventListener(
@@ -48,7 +32,7 @@ export function mountReadingActions(article: HTMLElement) {
       const action = button.dataset.readingAction
       if (action === "copy") {
         const text = pre?.textContent ?? button.closest("table")?.dataset.tableMarkdown ?? button.closest("[data-math-block]")?.getAttribute("data-math-source")
-        if (text !== undefined && text !== null) void copy(button, text)
+        if (text !== undefined && text !== null) copy(button, text)
         return
       }
       if (!pre) return
@@ -91,7 +75,7 @@ export function mountReadingActions(article: HTMLElement) {
   return () => {
     controller.abort()
     openTable?.removeAttribute("data-actions-open")
-    timers.forEach((timer) => window.clearTimeout(timer))
+    copyButtons.forEach((feedback) => feedback.reset())
     article.querySelectorAll("[data-code-motion]").forEach((pre) => {
       pre
         .getAnimations()
