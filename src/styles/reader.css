@@ -168,21 +168,28 @@
   overscroll-behavior-x: contain;
 }
 .reading .katex-display {
-  position: relative;
   overflow-x: auto;
   max-width: 100%;
   overflow-y: hidden;
   padding-block: 0.5em;
   overscroll-behavior-x: contain;
 }
+:root[data-js] .reading [data-math-block] > .katex {
+  position: relative;
+  padding-inline: 2.375rem;
+}
+:root[data-js] .reading [data-math-block]:not(.fleqn) > .katex:not(:has(> .katex-html > .tag)) {
+  width: max-content;
+  margin-inline: auto;
+}
 .reading .math-actions {
   position: absolute;
   z-index: 1;
-  inset-block-start: 0.25rem;
-  inset-inline-end: 0.25rem;
+  inset-block-start: 50%;
+  inset-inline-end: 0;
   opacity: 0;
   pointer-events: none;
-  translate: 0 -2px;
+  translate: 0 calc(-50% - 2px);
   transition:
     opacity 160ms ease,
     translate 160ms ease;
@@ -190,7 +197,7 @@
 .reading .katex-display:is(:hover, :focus-within) .math-actions {
   opacity: 1;
   pointer-events: auto;
-  translate: 0;
+  translate: 0 -50%;
 }
 .reading .math-actions .icon-button {
   background: transparent;

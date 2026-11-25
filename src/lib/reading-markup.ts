@@ -67,11 +67,13 @@ function mathSource(display: Element) {
 
 export function addMathControls(display: Element) {
   if (display.properties.dataMathControls !== undefined) return false
-  const source = mathSource(display)
+  const formula = display.children.find((child): child is Element => child.type === "element" && Array.isArray(child.properties.className) && child.properties.className.includes("katex"))
+  if (!formula) return false
+  const source = mathSource(formula)
   if (!source) return false
   display.properties.dataMathBlock = ""
   display.properties.dataMathSource = source
-  display.children.unshift(...renderMarkup(createElement("span", { className: "math-actions", "data-enhancement": "" }, copyControl("复制公式"))))
+  formula.children.push(...renderMarkup(createElement("span", { className: "math-actions", "data-enhancement": "" }, copyControl("复制公式"))))
   display.properties.dataMathControls = ""
   return true
 }
