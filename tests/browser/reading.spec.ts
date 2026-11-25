@@ -245,6 +245,30 @@ test("the saved theme and code toolbar are usable while external scripts are del
   expect((await code.boundingBox())!.y - (await toolbar.boundingBox())!.y).toBeCloseTo(codeOffset, 0)
 })
 
+test("appearance and copy icons blend between states", async ({ context, page }) => {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"])
+  await page.emulateMedia({ colorScheme: "light" })
+  await page.goto(article)
+  const theme = page.getByRole("button", { name: "明暗模式：跟随系统" })
+  const copy = page.getByRole("button", { name: "复制正文 Markdown" })
+
+  for (const [button, outgoing, incoming] of [
+    [theme, page.locator('[data-mode-icon="system"]'), page.locator('[data-mode-icon="light"]')],
+    [copy, copy.locator(".copy-idle"), copy.locator(".copy-success")]
+  ] as const) {
+    await expect(outgoing).toHaveCSS("opacity", "1")
+    await outgoing.evaluate((icon) => {
+      icon.addEventListener("transitionrun", (event) => {
+        if (event instanceof TransitionEvent && event.propertyName === "filter") icon.setAttribute("data-test-blur-transition", "")
+      })
+    })
+    await button.click()
+    await expect(outgoing).toHaveAttribute("data-test-blur-transition", "")
+    await expect(outgoing).toBeHidden()
+    await expect(incoming).toHaveCSS("opacity", "1")
+  }
+})
+
 test("copy feedback follows the latest clipboard operation", async ({ page }) => {
   await page.addInitScript(() => {
     let rejectOlder: ((error: Error) => void) | undefined
@@ -410,7 +434,7 @@ test("display math reveals a ghost copy button and copies its TeX source", async
   await formulaText.hover()
   await expect(display.locator(".math-actions")).toHaveCSS("opacity", "1")
   await expect(copy).toHaveCSS("background-color", "rgba(0, 0, 0, 0)")
-  const icon = copy.locator("svg:visible")
+  const icon = copy.locator(".copy-idle")
   await expect(icon).toHaveCSS("fill", "none")
   await expect(icon.locator("path")).not.toHaveCSS("stroke", "none")
   const iconBounds = (await icon.boundingBox())!
@@ -426,7 +450,8 @@ test("display math reveals a ghost copy button and copies its TeX source", async
   expect(iconBounds.y + iconBounds.height / 2).toBeCloseTo(button!.y + button!.height / 2)
   await copy.click()
   await expect(copy).toHaveAttribute("data-copy-state", "success")
-  await expect(copy.locator("svg:visible path")).not.toHaveCSS("stroke", "none")
+  await expect(copy.locator(".copy-success")).toHaveCSS("opacity", "1")
+  await expect(copy.locator(".copy-success path")).not.toHaveCSS("stroke", "none")
   await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(source)
 })
 

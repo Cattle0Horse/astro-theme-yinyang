@@ -146,15 +146,6 @@
   min-width: 0;
   font-size: var(--fs-ui);
 }
-[data-mode-icon] {
-  display: none;
-}
-:root[data-theme-mode="light"] [data-mode-icon="light"],
-:root[data-theme-mode="dark"] [data-mode-icon="dark"],
-:root[data-theme-mode="system"] [data-mode-icon="system"],
-:root:not([data-theme-mode]) [data-mode-icon="system"] {
-  display: block;
-}
 .palette-toggle::before {
   content: "";
   width: 12px;
