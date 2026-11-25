@@ -89,6 +89,13 @@
   color: var(--accent);
   text-decoration: underline;
 }
+.reading a:is(:hover, :focus-visible) {
+  color: var(--ink);
+}
+.reading a:active {
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+}
 .reading a.heading-permalink {
   display: inline-block;
   margin-inline-start: 0.4em;
@@ -240,13 +247,6 @@
   align-items: center;
   gap: inherit;
 }
-.reading-copy-icons [data-copy-success],
-[data-copy-done] [data-copy-idle] {
-  display: none;
-}
-[data-copy-done] [data-copy-success] {
-  display: block;
-}
 :root:not([data-js]) [data-code-controls],
 :root:not([data-js]) [data-code-fold] {
   display: none;
@@ -325,7 +325,7 @@
   rotate: 180deg;
 }
 .code-fold .code-fold-button:active {
-  scale: 1;
+  scale: 0.98;
 }
 .code-fold-button:focus-visible {
   outline-offset: -2px;

@@ -71,6 +71,9 @@
   animation: img-loading-spin 800ms linear infinite;
   pointer-events: none;
 }
+:root[data-js] .loading-image-frame.is-retrying::after {
+  translate: 0 -0.75rem;
+}
 .loading-failed {
   position: absolute;
   inset: 0;
@@ -86,6 +89,23 @@
   line-height: 1.4;
   text-align: center;
   cursor: pointer;
+  transition:
+    background-color 160ms ease,
+    color 160ms ease;
+}
+.loading-failed:not([aria-disabled="true"]):is(:hover, :focus-visible) {
+  background: color-mix(in srgb, var(--accent) 12%, var(--paper));
+  color: var(--ink);
+}
+.loading-failed:not([aria-disabled="true"]):active {
+  background: color-mix(in srgb, var(--accent) 20%, var(--paper));
+}
+.loading-failed[aria-disabled="true"] {
+  cursor: wait;
+  background: transparent;
+}
+.loading-failed[aria-disabled="true"] svg {
+  visibility: hidden;
 }
 .loading-failed[hidden] {
   display: none;
@@ -357,6 +377,9 @@
 .toc-links a:focus-visible {
   outline-offset: -2px;
 }
+.toc-links a:active {
+  background: var(--selection-bg);
+}
 .toc-desktop .toc-links > li[data-depth]::before {
   content: "" / "";
   position: absolute;
@@ -384,7 +407,7 @@
 .toc-desktop .toc-indicator[data-toc-active] {
   visibility: visible;
 }
-.toc-desktop .toc-links a[data-toc-visible]:not(:hover) {
+.toc-desktop .toc-links a[data-toc-visible]:not(:hover, [aria-current]) {
   color: color-mix(in srgb, var(--accent) 55%, var(--muted));
 }
 .toc-open {

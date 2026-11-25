@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react"
-import { Check, Copy } from "lucide-react"
+import { CopyFeedback } from "./ui/CopyFeedback"
 import { IconButton } from "./ui/IconButton"
 
 export async function copyText(text: string) {
@@ -7,7 +7,8 @@ export async function copyText(text: string) {
 }
 
 export default function CopyText({ source, label = "复制正文 Markdown" }: { source: string; label?: string }) {
-  const [status, setStatus] = useState("")
+  const [state, setState] = useState<"pending" | "success" | "error">()
+  const status = state === "pending" ? "正在复制" : state === "success" ? "已复制" : state === "error" ? "复制失败" : ""
   const timer = useRef(0)
   const operation = useRef(0)
   useEffect(
@@ -21,7 +22,8 @@ export default function CopyText({ source, label = "复制正文 Markdown" }: { 
   async function copy() {
     const current = ++operation.current
     window.clearTimeout(timer.current)
-    let result: string
+    setState("pending")
+    let result: "success" | "error"
     try {
       const response = fetch(source).then((result) => {
         if (!result.ok) throw new Error("Could not load Markdown")
@@ -32,19 +34,19 @@ export default function CopyText({ source, label = "复制正文 Markdown" }: { 
         void text.catch(() => {})
         await navigator.clipboard.write([new ClipboardItem({ "text/plain": text })])
       } else await copyText(await (await response).text())
-      result = "已复制"
+      result = "success"
     } catch {
-      result = "复制失败"
+      result = "error"
     }
     if (current !== operation.current) return
-    setStatus(result)
-    timer.current = window.setTimeout(() => setStatus(""), 1800)
+    setState(result)
+    timer.current = window.setTimeout(() => setState(undefined), 1800)
   }
 
   return (
     <span className="inline-flex items-center" data-enhancement>
-      <IconButton label={label} tooltip={status || label} onClick={copy}>
-        {status === "已复制" ? <Check aria-hidden="true" /> : <Copy aria-hidden="true" />}
+      <IconButton label={label} tooltip={status || label} data-copy-state={state} onClick={copy}>
+        <CopyFeedback />
       </IconButton>
       <span role="status" className="sr-only">
         {status}

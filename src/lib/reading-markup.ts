@@ -1,9 +1,10 @@
 import type { Element } from "hast"
 import { createElement } from "react"
 import { renderToStaticMarkup } from "react-dom/server"
-import { Check, ChevronDown, Copy, ListOrdered, WrapText } from "lucide-react"
+import { ChevronDown, ListOrdered, WrapText } from "lucide-react"
 import { fromHtml } from "hast-util-from-html"
 import { visit } from "unist-util-visit"
+import { CopyFeedback } from "../components/ui/CopyFeedback.ts"
 
 import { codeFoldThreshold } from "./code-block.ts"
 
@@ -39,16 +40,7 @@ function copyControl(label: string) {
   return createElement(
     "span",
     { className: "inline-flex items-center" },
-    button(
-      label,
-      "copy",
-      createElement(
-        "span",
-        { className: "reading-copy-icons", "aria-hidden": true },
-        createElement("span", { "data-copy-idle": "" }, createElement(Copy)),
-        createElement("span", { "data-copy-success": "" }, createElement(Check))
-      )
-    ),
+    button(label, "copy", createElement(CopyFeedback)),
     createElement("span", { role: "status", className: "sr-only" })
   )
 }

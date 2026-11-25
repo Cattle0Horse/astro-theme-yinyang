@@ -10,19 +10,15 @@ interface Props {
 }
 
 const { initial } = Astro.props
+const pathname = Astro.url.pathname.replace(/\/$/u, "")
 const links = [
-  { href: basePath(""), label: "Blog", icon: House },
-  { href: basePath("notes/"), label: "Notes", icon: NotebookPen },
-  { href: basePath("tags/"), label: "标签", icon: Tags },
+  { href: basePath(""), section: basePath("posts/"), label: "Blog", icon: House },
+  { href: basePath("notes/"), section: basePath("notes/"), label: "Notes", icon: NotebookPen },
+  { href: basePath("tags/"), section: basePath("tags/"), label: "标签", icon: Tags },
   { href: basePath("index.xml"), label: "RSS", icon: Rss }
 ].map((link) => ({
   ...link,
-  current:
-    Astro.url.pathname === link.href
-      ? ("page" as const)
-      : link.href !== basePath("") && link.href.endsWith("/") && Astro.url.pathname.startsWith(link.href)
-        ? ("location" as const)
-        : undefined
+  current: pathname === link.href.replace(/\/$/u, "") ? ("page" as const) : link.section && Astro.url.pathname.startsWith(link.section) ? ("location" as const) : undefined
 }))
 const currentLabel = links.find(({ current }) => current)?.label ?? "导航"
 ---

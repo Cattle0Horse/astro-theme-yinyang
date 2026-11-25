@@ -32,10 +32,15 @@ export function startImageLoading() {
       const original = new URL(image.src, location.href)
       let disposed = false
       const failed = retryTemplate.cloneNode(true) as HTMLButtonElement
+      const label = failed.querySelector("span")!
       frame.append(failed)
       const showImage = () => {
         frame.classList.remove("is-loading", "is-failed", "is-retrying")
         frame.classList.add("is-loaded")
+        if (document.activeElement === failed && frame instanceof HTMLElement) {
+          frame.tabIndex = -1
+          frame.focus({ preventScroll: true })
+        }
         failed.hidden = true
       }
       const complete = async () => {
@@ -46,16 +51,19 @@ export function startImageLoading() {
       const error = () => {
         frame.classList.remove("is-loading", "is-loaded", "is-retrying")
         frame.classList.add("is-failed")
+        failed.removeAttribute("aria-disabled")
+        label.textContent = "点击重试"
         failed.hidden = false
       }
       const retry = (event: MouseEvent) => {
         event.preventDefault()
-        if (!/^https?:$/u.test(original.protocol)) return
+        if (failed.hasAttribute("aria-disabled") || !/^https?:$/u.test(original.protocol)) return
         const url = new URL(image.currentSrc || original.href)
         url.searchParams.set("retry", String(Date.now()))
         frame.classList.remove("is-failed")
         frame.classList.add("is-loading", "is-retrying")
-        failed.hidden = true
+        failed.setAttribute("aria-disabled", "true")
+        label.textContent = "正在重试"
         image.removeAttribute("srcset")
         image.loading = "eager"
         image.src = url.href

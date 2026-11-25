@@ -9,24 +9,28 @@ export function mountReadingActions(article: HTMLElement) {
     const operation = (pending.get(button) ?? 0) + 1
     pending.set(button, operation)
     window.clearTimeout(timers.get(button))
-    let status: string
+    const message = button.parentElement?.querySelector('[role="status"]')
+    button.dataset.copyState = "pending"
+    button.dataset.tooltip = "正在复制"
+    if (message) message.textContent = "正在复制"
+    let state: "success" | "error"
     try {
       await navigator.clipboard.writeText(text)
-      status = "已复制"
+      state = "success"
     } catch {
-      status = "复制失败"
+      state = "error"
     }
     if (signal.aborted || pending.get(button) !== operation) return
-    const message = button.parentElement?.querySelector('[role="status"]')
+    const status = state === "success" ? "已复制" : "复制失败"
     button.dataset.tooltip = status
-    button.toggleAttribute("data-copy-done", status === "已复制")
+    button.dataset.copyState = state
     if (message) message.textContent = status
     timers.set(
       button,
       window.setTimeout(() => {
         timers.delete(button)
         button.dataset.tooltip = button.getAttribute("aria-label") ?? ""
-        button.removeAttribute("data-copy-done")
+        delete button.dataset.copyState
         if (message) message.textContent = ""
       }, 1800)
     )

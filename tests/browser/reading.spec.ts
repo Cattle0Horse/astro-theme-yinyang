@@ -416,7 +416,7 @@ test("display math reveals a ghost copy button and copies its TeX source", async
   expect(iconBounds.x + iconBounds.width / 2).toBeCloseTo(button!.x + button!.width / 2)
   expect(iconBounds.y + iconBounds.height / 2).toBeCloseTo(button!.y + button!.height / 2)
   await copy.click()
-  await expect(copy).toHaveAttribute("data-copy-done", "")
+  await expect(copy).toHaveAttribute("data-copy-state", "success")
   await expect(copy.locator("svg:visible path")).not.toHaveCSS("stroke", "none")
   await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(source)
 })
@@ -777,6 +777,9 @@ test("the missing local image keeps a full-width placeholder without the Reader 
   const after = await frame.boundingBox()
   expect(after?.width).toBe(before?.width)
   expect(after?.height).toBe(before?.height)
+  await retry.press("Enter")
+  await expect(retry).toBeVisible()
+  await expect(retry).toBeFocused()
 })
 
 test("a pending remote image keeps its placeholder into a failed request and supports retry", async ({ page }) => {
