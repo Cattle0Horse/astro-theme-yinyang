@@ -430,6 +430,29 @@ test("display math reveals a ghost copy button and copies its TeX source", async
   await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(source)
 })
 
+test("wide math keeps its copy button within the viewport while scrolling", async ({ context, page }) => {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"])
+  await page.setViewportSize({ width: 320, height: 800 })
+  await page.goto("/posts/math-demo/")
+  const formula = page.locator(".katex-display").filter({ has: page.locator("annotation").filter({ hasText: /pmatrix/u }) })
+  const copy = formula.getByRole("button", { name: "复制公式" })
+  await formula.locator(".katex-html").hover()
+  await expect(formula.locator(".math-actions")).toHaveCSS("opacity", "1")
+  expect(await formula.evaluate((element) => element.scrollWidth)).toBeGreaterThan(await formula.evaluate((element) => element.clientWidth))
+  const viewport = (await formula.boundingBox())!
+  const atStart = (await copy.boundingBox())!
+  expect(atStart.x + atStart.width).toBeLessThanOrEqual(viewport.x + viewport.width + 1)
+
+  await formula.evaluate((element) => (element.scrollLeft = element.scrollWidth))
+  const atEnd = (await copy.boundingBox())!
+  expect(atEnd.x).toBeCloseTo(atStart.x, 0)
+  await copy.hover()
+  await expect(formula.locator(".math-actions")).toHaveCSS("opacity", "1")
+  await copy.click()
+  const source = await formula.locator("annotation").textContent()
+  await expect.poll(async () => (await page.evaluate(() => navigator.clipboard.readText())).replaceAll("\r\n", "\n")).toBe(source)
+})
+
 test("mobile TOC locks the background scroll and restores it on close", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 600 })
   await page.goto("/posts/math-demo/#错误兜底")

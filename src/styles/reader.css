@@ -194,6 +194,9 @@
   padding-block: 0.5em;
   overscroll-behavior-x: contain;
 }
+:root[data-js] .reading [data-math-block] {
+  min-block-size: calc(0.5em + 2rem);
+}
 .reading .katex-html {
   user-select: all;
 }
@@ -220,7 +223,7 @@
   position: absolute;
   z-index: 1;
   inset-block-start: 0;
-  inset-inline-end: 0;
+  inset-inline: 0;
   opacity: 0;
   pointer-events: none;
   translate: 0 -2px;
@@ -228,10 +231,19 @@
     opacity 160ms ease,
     translate 160ms ease;
 }
+.reading .math-actions > span {
+  position: sticky;
+  inset-inline-end: 0;
+  display: flex;
+  inline-size: max-content;
+  margin-inline-start: auto;
+}
 .reading [data-math-block] > .katex:is(:hover, :focus-within) > .math-actions {
   opacity: 1;
-  pointer-events: auto;
   translate: 0 0;
+}
+.reading [data-math-block] > .katex:is(:hover, :focus-within) > .math-actions .icon-button {
+  pointer-events: auto;
 }
 .reading .math-actions .icon-button {
   background: transparent;
