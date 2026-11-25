@@ -86,7 +86,7 @@
   fill: var(--rule-light);
 }
 .nf-fallback h1 {
-  font: var(--font-weight-medium) var(--fs-title)/1.3 var(--ui-font);
+  font: var(--ui-weight-strong) var(--fs-title)/1.3 var(--ui-font);
   margin: 20px 0;
 }
 .nf-fallback .article-toolbar {

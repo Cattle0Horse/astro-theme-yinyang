@@ -374,6 +374,18 @@ test("chemistry arrows, fraction bars, and root indices render with the KaTeX st
   }
 })
 
+test("display math reveals a ghost copy button and copies its TeX source", async ({ context, page }) => {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"])
+  await page.goto("/posts/math-demo/")
+  const display = page.locator(".katex-display").first()
+  const copy = display.getByRole("button", { name: "复制公式" })
+  await display.hover()
+  await expect(copy).toHaveCSS("opacity", "1")
+  await expect(copy).toHaveCSS("background-color", "rgba(0, 0, 0, 0)")
+  await copy.click()
+  await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe("x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}")
+})
+
 test("mobile TOC locks the background scroll and restores it on close", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 600 })
   await page.goto("/posts/math-demo/#错误兜底")

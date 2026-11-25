@@ -168,11 +168,42 @@
   overscroll-behavior-x: contain;
 }
 .reading .katex-display {
+  position: relative;
   overflow-x: auto;
   max-width: 100%;
   overflow-y: hidden;
   padding-block: 0.5em;
   overscroll-behavior-x: contain;
+}
+.reading .math-actions {
+  position: absolute;
+  z-index: 1;
+  inset-block-start: 0.25rem;
+  inset-inline-end: 0.25rem;
+  opacity: 0;
+  pointer-events: none;
+  translate: 0 -2px;
+  transition:
+    opacity 160ms ease,
+    translate 160ms ease;
+}
+.reading .katex-display:is(:hover, :focus-within) .math-actions {
+  opacity: 1;
+  pointer-events: auto;
+  translate: 0;
+}
+.reading .math-actions .icon-button {
+  background: transparent;
+  color: var(--muted);
+  box-shadow: none;
+}
+.reading .math-actions .icon-button:hover,
+.reading .math-actions .icon-button:focus-visible {
+  color: var(--accent);
+  box-shadow: 0 2px 8px #0002;
+}
+:root:not([data-js]) .math-actions {
+  display: none;
 }
 .reading table {
   border-collapse: collapse;
@@ -257,7 +288,7 @@
 .toc-heading {
   color: var(--secondary-ink);
   font-size: var(--fs-ui);
-  font-weight: var(--font-weight-medium);
+  font-weight: var(--ui-weight-strong);
 }
 .toc-desktop > .toc-heading {
   min-height: 36px;

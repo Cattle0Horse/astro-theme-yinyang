@@ -53,6 +53,29 @@ function copyControl(label: string) {
   )
 }
 
+function mathSource(display: Element) {
+  let source = ""
+  visit(display, "element", (node) => {
+    if (node.tagName !== "annotation" || node.properties.encoding !== "application/x-tex") return
+    visit(node, "text", ({ value }) => {
+      source += value
+    })
+    return "skip"
+  })
+  return source
+}
+
+export function addMathControls(display: Element) {
+  if (display.properties.dataMathControls !== undefined) return false
+  const source = mathSource(display)
+  if (!source) return false
+  display.properties.dataMathBlock = ""
+  display.properties.dataMathSource = source
+  display.children.unshift(...renderMarkup(createElement("span", { className: "math-actions", "data-enhancement": "" }, copyControl("复制公式"))))
+  display.properties.dataMathControls = ""
+  return true
+}
+
 function renderMarkup(node: ReturnType<typeof createElement>) {
   return fromHtml(renderToStaticMarkup(node), { fragment: true }).children.filter((child): child is Element => child.type === "element")
 }

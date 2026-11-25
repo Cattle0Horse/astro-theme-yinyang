@@ -40,7 +40,7 @@ export function mountReadingActions(article: HTMLElement) {
       const pre = button.closest("[data-code-block]")?.querySelector<HTMLPreElement>(":scope > pre")
       const action = button.dataset.readingAction
       if (action === "copy") {
-        const text = pre?.textContent ?? button.closest("table")?.dataset.tableMarkdown
+        const text = pre?.textContent ?? button.closest("table")?.dataset.tableMarkdown ?? button.closest("[data-math-block]")?.getAttribute("data-math-source")
         if (text !== undefined && text !== null) void copy(button, text)
         return
       }

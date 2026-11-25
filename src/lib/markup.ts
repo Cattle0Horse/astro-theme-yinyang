@@ -4,7 +4,7 @@ import { toHtml } from "hast-util-to-html"
 import { visit } from "unist-util-visit"
 import type { Entry } from "./content"
 import { imageCandidates } from "./markdown/resources.ts"
-import { addCodeControls, addTableControls } from "./reading-markup.ts"
+import { addCodeControls, addMathControls, addTableControls } from "./reading-markup.ts"
 import { markFootnoteClauses } from "./footnote-markup.ts"
 
 export function articleScope(entry: Entry) {
@@ -117,6 +117,9 @@ export function articleMarkup(html: string, canonical: URL, namespace?: string, 
     else if (node.properties.dataTable !== undefined) {
       const table = node.children.find((child): child is Element => child.type === "element" && child.tagName === "table")
       if (table) addTableControls(table)
+    }
+    if (node.tagName === "span" && Array.isArray(node.properties.className) && node.properties.className.includes("katex-display")) {
+      hasReader = addMathControls(node) || hasReader
     }
     if (node.tagName === "a") {
       const { dataFootnoteRef, dataFootnoteBackref } = node.properties
