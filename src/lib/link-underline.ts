@@ -8,13 +8,20 @@ interface UnderlineState {
 }
 
 const states = new WeakMap<HTMLAnchorElement, UnderlineState>()
-const timing = { duration: 220, easing: "ease" }
+const pixelsPerMillisecond = 0.5
 const transitionDocument: Document & { activeViewTransition?: ViewTransition | null } = document
 let observedTransition: ViewTransition | undefined
 
+function sweepDuration(link: HTMLAnchorElement) {
+  // Each line paints its own underline segment when an inline link wraps.
+  let width = 0
+  for (const fragment of link.getClientRects()) width = Math.max(width, fragment.width)
+  return width / pixelsPerMillisecond
+}
+
 function showUnderline(link: HTMLAnchorElement, state: UnderlineState) {
   link.setAttribute("data-underline-visible", "")
-  state.enter = link.animate([{ "--link-underline-end": "0%" }, { "--link-underline-end": "100%" }], { ...timing, fill: "backwards" })
+  state.enter = link.animate([{ "--link-underline-end": "0%" }, { "--link-underline-end": "100%" }], { duration: sweepDuration(link), fill: "backwards" })
 }
 
 function update(link: HTMLAnchorElement, kind: "hover" | "focus", active: boolean) {
@@ -36,7 +43,7 @@ function update(link: HTMLAnchorElement, kind: "hover" | "focus", active: boolea
       { "--link-underline-start": "0%", "--link-underline-end": end },
       { "--link-underline-start": "100%", "--link-underline-end": "100%" }
     ],
-    { ...timing, fill: "both" }
+    { duration: sweepDuration(link), fill: "both" }
   )
   state.exit = exit
   const finish = () => {

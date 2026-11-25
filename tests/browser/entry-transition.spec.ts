@@ -44,6 +44,36 @@ test("untitled Notes share the date only and unrelated pages use the regular tra
   await expect(page.locator("body")).toHaveAttribute("data-shared-snapshots", "")
 })
 
+test("short and long navigation underlines sweep at the same speed", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.goto("/")
+  const navigation = page.getByRole("navigation", { name: "主导航" })
+  const speeds: number[] = []
+
+  for (const name of ["Blog", "Notes"]) {
+    const link = navigation.getByRole("link", { name, exact: true })
+    for (const entering of [true, false]) {
+      if (entering) await link.hover()
+      else await page.mouse.move(0, 0)
+
+      const { width, duration, midpoint } = await link.evaluate((element, entering) => {
+        const property = entering ? "--link-underline-end" : "--link-underline-start"
+        const animation = element.getAnimations().find((entry) => entry.effect instanceof KeyframeEffect && property in entry.effect.getKeyframes()[0])!
+        const duration = Number(animation.effect!.getComputedTiming().activeDuration)
+        animation.pause()
+        animation.currentTime = duration / 2
+        const midpoint = parseFloat(getComputedStyle(element).getPropertyValue(property))
+        animation.finish()
+        return { width: element.getBoundingClientRect().width, duration, midpoint }
+      }, entering)
+      expect(midpoint).toBeCloseTo(50)
+      speeds.push(width / duration)
+    }
+  }
+
+  for (const speed of speeds.slice(1)) expect(speed).toBeCloseTo(speeds[0], 5)
+})
+
 test("desktop navigation keeps the hovered underline through the page swap", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 })
   await page.goto("/")
