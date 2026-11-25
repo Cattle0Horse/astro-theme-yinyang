@@ -131,8 +131,8 @@
 .header-link:focus-visible {
   color: var(--accent);
 }
-.header-desktop .header-link:is(:hover, :focus-visible) {
-  text-decoration: underline;
+.header-desktop .header-link {
+  --link-underline-height: 1px;
 }
 .header-link svg {
   width: 1rem;

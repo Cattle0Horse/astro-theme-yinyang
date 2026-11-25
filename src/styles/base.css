@@ -235,6 +235,34 @@ input {
 a {
   text-underline-offset: 0.22em;
 }
+@property --link-underline-start {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 0%;
+}
+@property --link-underline-end {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 0%;
+}
+:where(.header-desktop .header-link) {
+  background-image:
+    linear-gradient(to right, transparent var(--link-underline-start), var(--accent) var(--link-underline-start) var(--link-underline-end), transparent var(--link-underline-end)),
+    linear-gradient(var(--link-rest-line, transparent), var(--link-rest-line, transparent));
+  background-position: left bottom;
+  background-repeat: no-repeat;
+  background-size:
+    100% var(--link-underline-height, 2px),
+    100% 1px;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+  transition: color 180ms ease;
+
+  &[data-underline-visible],
+  :root:not([data-js]) &:is(:hover, :focus-visible) {
+    --link-underline-end: 100%;
+  }
+}
 .shell {
   width: min(calc(100% - 2.5rem), var(--column));
   margin-inline: auto;

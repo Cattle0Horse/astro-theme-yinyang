@@ -44,6 +44,49 @@ test("untitled Notes share the date only and unrelated pages use the regular tra
   await expect(page.locator("body")).toHaveAttribute("data-shared-snapshots", "")
 })
 
+test("desktop navigation keeps the hovered underline through the page swap", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.goto("/")
+  const navigation = page.getByRole("navigation", { name: "主导航" })
+  const notes = navigation.getByRole("link", { name: "Notes" })
+  await notes.hover()
+  await expect(notes).toHaveCSS("--link-underline-end", "100%")
+
+  await notes.evaluate((link) => {
+    document.addEventListener(
+      "astro:after-swap",
+      () => {
+        const selector = `.header-desktop a[href="${CSS.escape(link.getAttribute("href")!)}"]`
+        const startedAt = performance.now()
+        let minimum = 100
+
+        function sample(now: number) {
+          const current = document.querySelector(selector)!
+          const style = getComputedStyle(current)
+          const start = parseFloat(style.getPropertyValue("--link-underline-start"))
+          const end = parseFloat(style.getPropertyValue("--link-underline-end"))
+          minimum = Math.min(minimum, end - start)
+          if (now - startedAt < 250) requestAnimationFrame(sample)
+          else document.body.dataset.navUnderlineMinimum = String(minimum)
+        }
+
+        sample(startedAt)
+      },
+      { once: true }
+    )
+  })
+
+  await notes.click()
+  await expect(page).toHaveURL(/\/notes\/$/u)
+  await expect(notes).toHaveAttribute("aria-current", "page")
+  await expect(navigation.getByRole("link", { name: "Blog" })).not.toHaveAttribute("aria-current")
+  await expect(page.locator("body")).toHaveAttribute("data-nav-underline-minimum", "100")
+
+  await page.goBack()
+  await expect(navigation.getByRole("link", { name: "Blog" })).toHaveAttribute("aria-current", "page")
+  await expect(notes).not.toHaveAttribute("aria-current")
+})
+
 test("repeated Notes navigation loads once and reselecting Notes returns to the top", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 800 })
   let release!: () => void
