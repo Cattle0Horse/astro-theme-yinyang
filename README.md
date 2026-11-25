@@ -4,28 +4,28 @@
 
 ## 创建自己的站点
 
-主题发布到 npm、模板推送到 GitHub 后，用 Astro CLI 从仓库的 `starter/` 目录创建项目。将 `OWNER/REPO` 替换为主题仓库名。
+主题通过 GitHub 版本标签分发。用 Astro CLI 以已发布的 GitHub 版本标签从 `starter/` 创建项目。模板使用 `^0.1.0` 的 Git SemVer 范围，后续运行 `pnpm update astro-theme-yinyang` 会选择最新兼容标签。
 
-~~~sh
-pnpm create astro@latest my-blog --template OWNER/REPO/starter
+```sh
+pnpm create astro@latest my-blog --template Cattle0Horse/blog-theme/starter#v0.1.0
 cd my-blog
 pnpm dev
-~~~
+```
 
 在 `astro.config.ts` 的 `yinyang()` 中设置标题、描述和作者。模板内有一篇可删的入门文章。完整演示文章随主题仓库的演示站构建。
 
-升级时在站点仓库运行 `pnpm add -E astro-theme-yinyang@<版本>`，检查构建并提交更新后的依赖和锁文件。站点仓库持有自己的文章、附件和配置。
+升级时运行 `pnpm update astro-theme-yinyang`，它会在 `^0.1.0` 范围内选择最新的 GitHub 版本标签并更新锁文件。大版本升级时再手动调整依赖范围，运行 `pnpm build` 后提交锁文件。站点仓库持有自己的文章、附件和配置。
 
 ## 主题仓库开发
 
 使用 Node 24 和 pnpm。
 
-~~~sh
+```sh
 pnpm install --frozen-lockfile
 pnpm dev
-~~~
+```
 
-发布前可以用 `pnpm pack` 生成本地 `.tgz`，再在模板副本中运行 `pnpm add <主题包绝对路径>`。`pnpm test:distribution` 会在临时目录验证主题包安装、构建和升级。
+发布新版时，将 `package.json` 的版本号和模板的依赖范围同步更新，再推送对应的 `v<版本>` 标签。`pnpm test:distribution` 用临时仓库验证从 Git SemVer 标签安装、构建和升级。
 
 ## 写作
 
@@ -41,12 +41,12 @@ pnpm dev
 
 ## 构建与检查
 
-~~~sh
+```sh
 pnpm check
 pnpm test
 pnpm exec playwright install chromium
 pnpm test:browser
-~~~
+```
 
 `pnpm build` 生成可直接托管的静态目录 `dist/`。部署时用 `SITE_URL` 设置站点地址，子目录部署再用 `SITE_BASE` 设置路径，例如 `/blog-theme`。主题选项见 `src/site.config.ts` 的 `ThemeOptions`。
 

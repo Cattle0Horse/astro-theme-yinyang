@@ -1,6 +1,7 @@
 {
   "name": "astro-theme-yinyang",
   "version": "0.1.0",
+  "private": true,
   "description": "Static Blog and Notes theme for Astro",
   "license": "MIT",
   "type": "module",

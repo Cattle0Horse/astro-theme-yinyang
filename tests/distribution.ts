@@ -3,11 +3,13 @@ import { spawnSync } from "node:child_process"
 import { cp, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { dirname, join, resolve } from "node:path"
+import { pathToFileURL } from "node:url"
 
 const root = resolve(import.meta.dirname, "..")
 const pm = process.env.npm_execpath ?? "pnpm"
 const temp = await mkdtemp(join(tmpdir(), "yinyang-distribution-"))
 const consumer = join(temp, "site")
+const upstream = join(temp, "theme")
 
 function run(command: string, args: string[], cwd: string, env = process.env) {
   const result = spawnSync(command, args, { cwd, env, encoding: "utf8", windowsHide: true })
@@ -24,16 +26,32 @@ function build(base: string) {
   pnpm(["build"], consumer, { ...process.env, SITE_BASE: base, SITE_URL: "https://example.com" })
 }
 
+function tagTheme(version: string) {
+  run("git", ["add", "--all"], upstream)
+  run("git", ["-c", "user.name=YinYang Tests", "-c", "user.email=yinyang@example.com", "-c", "commit.gpgSign=false", "commit", "-m", version], upstream)
+  run("git", ["-c", "tag.gpgSign=false", "tag", "v" + version], upstream)
+}
+
+const source = (selector: string) => `git+${pathToFileURL(upstream).href}#${selector}`
 const output = (path: string) => readFile(join(consumer, "dist", path), "utf8")
 
 try {
-  const initial = join(temp, "theme.tgz")
-  pnpm(["pack", "--out", initial, "--silent"], root)
-  const files = run("tar", ["-tf", initial], root).split(/\r?\n/u)
-  assert.ok(!files.some((file) => /^package\/(?:src\/content\/|starter\/|tests\/)/u.test(file)))
+  await mkdir(upstream)
+  for (const path of ["package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", "src"]) {
+    await cp(join(root, path), join(upstream, path), { recursive: true })
+  }
+  const manifestPath = join(upstream, "package.json")
+  const manifest = JSON.parse(await readFile(manifestPath, "utf8"))
+  assert.equal(manifest.private, true)
+  run("git", ["init", "--initial-branch=main"], upstream)
+  tagTheme(manifest.version)
 
   await cp(join(root, "starter"), consumer, { recursive: true })
-  pnpm(["add", initial], consumer)
+  const siteManifest = JSON.parse(await readFile(join(consumer, "package.json"), "utf8"))
+  assert.equal(siteManifest.dependencies[manifest.name], "github:Cattle0Horse/blog-theme#semver:^0.1.0")
+  pnpm(["add", source("semver:^0.1.0")], consumer)
+  const installedManifest = join(consumer, "node_modules", manifest.name, "package.json")
+  assert.equal(JSON.parse(await readFile(installedManifest, "utf8")).version, manifest.version)
   build("/")
   assert.match(await output("index.html"), /我的博客/u)
   assert.match(await output("index.html"), /href="\/logo\.png"/u)
@@ -57,21 +75,15 @@ try {
     await writeFile(file, contents)
   }
 
-  // Repack the same sources with a higher test version to exercise a dependency-only upgrade.
-  run("tar", ["-xf", initial, "-C", temp], root)
-  const unpacked = join(temp, "package")
-  const manifestPath = join(unpacked, "package.json")
-  const manifest = JSON.parse(await readFile(manifestPath, "utf8"))
+  // Tag a second version in the fixture repository to exercise a dependency-only upgrade.
   const [major, minor, patch] = manifest.version.split("-")[0].split(".").map(Number)
   const nextVersion = `${major}.${minor}.${patch + 1}`
   await writeFile(manifestPath, JSON.stringify({ ...manifest, version: nextVersion }))
-  const next = join(temp, "theme-next.tgz")
-  pnpm(["pack", "--out", next, "--silent"], unpacked)
-  pnpm(["add", next], consumer)
+  tagTheme(nextVersion)
+  pnpm(["update", manifest.name], consumer)
   build("/my-blog")
 
-  const installed = JSON.parse(await readFile(join(consumer, "node_modules/astro-theme-yinyang/package.json"), "utf8"))
-  assert.equal(installed.version, nextVersion)
+  assert.equal(JSON.parse(await readFile(installedManifest, "utf8")).version, nextVersion)
   for (const [path, contents] of Object.entries(filesToKeep)) assert.deepEqual(await readFile(join(consumer, path)), Buffer.from(contents), path)
   const article = await output("posts/nested/mine/index.html")
   assert.match(await output("index.html"), /我的独立博客/u)
@@ -83,7 +95,8 @@ try {
   assert.match(await output("404.html"), /href="\/my-blog\/logo\.png"/u)
   assert.match(await output("sitemap.xml"), /https:\/\/example\.com\/my-blog\/posts\/nested\/mine\//u)
   assert.deepEqual(await readdir(join(consumer, "dist/posts")), ["nested"])
-  console.log("Packed theme installed and upgraded in a standalone site. Root and subpath builds passed.")
+  console.log("Theme installed and upgraded from Git tags in a standalone site. Root and subpath builds passed.")
 } finally {
+  assert.equal(dirname(temp), resolve(tmpdir()))
   await rm(temp, { recursive: true, force: true })
 }
