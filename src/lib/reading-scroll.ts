@@ -1,0 +1,64 @@
+let cancelScroll: (() => void) | undefined
+
+export function scrollToReadingTarget(event: MouseEvent, link: HTMLAnchorElement, target: HTMLElement, align: "start" | "center") {
+  event.preventDefault()
+  cancelScroll?.()
+  const controller = new AbortController()
+  let frame = requestAnimationFrame(start)
+
+  function stop() {
+    cancelAnimationFrame(frame)
+    controller.abort()
+    cancelScroll = undefined
+  }
+
+  function start(now: number) {
+    if (!target.isConnected) {
+      stop()
+      return
+    }
+    const root = document.documentElement
+    const { top, height } = target.getBoundingClientRect()
+    const from = scrollY
+    const padding = parseFloat(getComputedStyle(root).scrollPaddingBlockStart) || 0
+    const headingMargin = parseFloat(getComputedStyle(target).scrollMarginBlockStart) || 0
+    const offset = align === "center" ? (innerHeight - height) / 2 : padding + headingMargin
+    const to = Math.max(0, Math.min(from + top - offset, root.scrollHeight - root.clientHeight))
+    const distance = to - from
+    if (link.hash !== location.hash) {
+      const state = { ...history.state, scrollX, scrollY: from }
+      history.replaceState(state, "")
+      const next = { ...state, index: (state.index ?? 0) + 1 }
+      history.pushState(next, "", link.href)
+      // Synchronize Astro's router with the new fragment and its starting scroll position.
+      window.dispatchEvent(new PopStateEvent("popstate", { state: next }))
+    }
+    if (Math.abs(distance) < 1) {
+      stop()
+      return
+    }
+    const duration = Math.min(680, 260 + Math.sqrt(Math.abs(distance)) * 8)
+
+    function step(time: number) {
+      const progress = Math.min(1, (time - now) / duration)
+      const eased = progress * progress * (3 - 2 * progress)
+      window.scrollTo({ top: from + distance * eased, behavior: "instant" })
+      if (progress < 1) frame = requestAnimationFrame(step)
+      else stop()
+    }
+
+    frame = requestAnimationFrame(step)
+  }
+
+  cancelScroll = stop
+  const { signal } = controller
+  for (const type of ["wheel", "touchstart", "pointerdown", "keydown"]) window.addEventListener(type, stop, { passive: true, signal })
+  document.addEventListener("astro:before-swap", stop, { signal })
+  window.addEventListener(
+    "popstate",
+    (event) => {
+      if (event.isTrusted) stop()
+    },
+    { signal }
+  )
+}

@@ -3,16 +3,25 @@ export const codeFoldThreshold = 15
 // This function also runs in the inline fold bootstrap before the reader hydrates.
 export function animateCodeHeight(pre: HTMLElement, update: () => void, duration: number) {
   const height = pre.getBoundingClientRect().height
-  for (const animation of pre.getAnimations()) {
-    if (animation.id === "code-motion") animation.cancel()
+  const fold = pre.parentElement?.querySelector<HTMLElement>(":scope > [data-code-fold]")
+  const foldMargin = fold ? getComputedStyle(fold).marginBlockStart : undefined
+  for (const element of [pre, fold]) {
+    for (const animation of element?.getAnimations() ?? []) {
+      if (animation.id === "code-motion") animation.cancel()
+    }
   }
   update()
   if (matchMedia("(prefers-reduced-motion: reduce)").matches) return
   const nextHeight = pre.getBoundingClientRect().height
+  const nextFoldMargin = fold ? getComputedStyle(fold).marginBlockStart : undefined
   if (height === nextHeight) return
   const heights = [height + "px", nextHeight + "px"]
-  const animation = pre.animate({ height: heights, maxHeight: heights }, { duration, easing: "cubic-bezier(.22,1,.36,1)" })
+  const timing = { duration, easing: "cubic-bezier(.42,0,.58,1)" }
+  const animation = pre.animate({ height: heights, maxHeight: heights }, timing)
   animation.id = "code-motion"
+  if (fold && foldMargin && nextFoldMargin && foldMargin !== nextFoldMargin) {
+    fold.animate({ marginBlockStart: [foldMargin, nextFoldMargin] }, timing).id = "code-motion"
+  }
   pre.setAttribute("data-code-motion", "")
   const clean = () => {
     if (!pre.getAnimations().some((other) => other.id === "code-motion" && other.playState === "running")) pre.removeAttribute("data-code-motion")

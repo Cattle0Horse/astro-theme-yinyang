@@ -1,6 +1,36 @@
-import { expect, test } from "@playwright/test"
+import { expect, test, type Locator } from "@playwright/test"
 
 const article = "/posts/reading/markdown/"
+
+async function expectEasedReadingJump(link: Locator) {
+  const positions = await link.evaluate(async (element) => {
+    if (!(element instanceof HTMLAnchorElement)) throw new Error("Expected a reading link")
+    const samples = [{ position: scrollY, time: performance.now() }]
+    element.click()
+    await new Promise<void>((resolve) => {
+      const start = performance.now()
+
+      function sample(now: number) {
+        samples.push({ position: scrollY, time: now })
+        if (now - start < 750) requestAnimationFrame(sample)
+        else resolve()
+      }
+
+      requestAnimationFrame(sample)
+    })
+    return samples
+  })
+  const direction = Math.sign(positions.at(-1)!.position - positions[0].position)
+  const speeds = positions
+    .slice(1)
+    .map(({ position, time }, index) => (direction * (position - positions[index].position)) / Math.max(1, time - positions[index].time))
+    .filter(Boolean)
+  expect(Math.min(...speeds), JSON.stringify(positions)).toBeGreaterThanOrEqual(0)
+  expect(speeds.length, JSON.stringify(positions)).toBeGreaterThan(4)
+  const fastest = Math.max(...speeds)
+  expect(fastest).toBeGreaterThan(speeds[0] * 2)
+  expect(fastest).toBeGreaterThan(speeds.at(-1)! * 2)
+}
 
 test("restores the article scroll position and copies its code", async ({ context, page }) => {
   await context.grantPermissions(["clipboard-read", "clipboard-write"])
@@ -603,19 +633,9 @@ test("TOC scrolls the article smoothly and hides its own scrollbar after use", a
   })
   await expect(toc).toHaveCSS("scrollbar-color", "rgba(128, 128, 128, 0.28) rgba(0, 0, 0, 0)")
   await expect(toc).toHaveCSS("scrollbar-color", "rgba(0, 0, 0, 0) rgba(0, 0, 0, 0)")
-  const journey = page.evaluate(
-    () =>
-      new Promise<number[]>((resolve) => {
-        const positions: number[] = []
-        window.addEventListener("scroll", () => positions.push(scrollY), { passive: true })
-        window.addEventListener("scrollend", () => resolve(positions), { once: true })
-      })
-  )
-  await toc.getByRole("link", { name: "化学式" }).click()
+  await expectEasedReadingJump(toc.getByRole("link", { name: "化学式" }))
   await expect(page.getByRole("dialog")).toBeHidden()
   await expect(page).toHaveURL(new RegExp(encodeURIComponent("化学式") + "$", "u"))
-  const positions = await journey
-  expect(positions.some((position) => position > 0 && position < positions.at(-1)!)).toBe(true)
 })
 
 test("heading fragments point to their destination and replay after another activation", async ({ page }) => {
@@ -652,11 +672,11 @@ test("footnotes highlight the entry and return to the annotated clause", async (
   const reference = page.getByRole("link", { name: "查看脚注 2", exact: true })
   const paragraph = page.locator("p").filter({ has: reference })
   const height = (await paragraph.boundingBox())!.height
-  await reference.click()
+  await expectEasedReadingJump(reference)
   await expect(page).toHaveURL(/#user-content-fn-2$/u)
   const note = page.locator("#user-content-fn-2")
   await expect.poll(() => note.evaluate((element) => getComputedStyle(element, "::after").boxShadow)).toContain("inset")
-  await note.getByRole("link", { name: "返回引用处" }).click()
+  await expectEasedReadingJump(note.getByRole("link", { name: "返回引用处" }))
   await expect(page).toHaveURL(/#user-content-fnref-2$/u)
   const overlay = paragraph.locator(".footnote-clause-overlay > span")
   await expect(overlay.first()).toBeVisible()
@@ -888,6 +908,37 @@ test("code line numbers reverse in flight and expanding code hides its scrollbar
   const code = page.locator(".reading pre")
   await expect(code).toHaveCSS("scrollbar-width", "none")
   await expect(code).toHaveCSS("scrollbar-width", "thin")
+})
+
+test("code fold travels with eased motion in both directions", async ({ page }) => {
+  await page.goto(article)
+  const block = page.locator("[data-code-block]")
+
+  for (const name of ["展开代码", "折叠代码"]) {
+    const button = block.getByRole("button", { name, exact: true })
+    const samples = await button.evaluate((element) => {
+      if (!(element instanceof HTMLButtonElement)) throw new Error("Expected a fold button")
+      const block = element.closest("[data-code-block]")!
+      const position = () => element.getBoundingClientRect().top - block.getBoundingClientRect().top
+      const before = position()
+      element.click()
+      const animations = block.getAnimations({ subtree: true }).filter(({ id }) => id === "code-motion")
+      const samples = [0, 0.25, 0.5, 0.75, 1].map((progress) => {
+        for (const animation of animations) {
+          animation.pause()
+          animation.currentTime = Number(animation.effect?.getComputedTiming().activeDuration) * progress
+        }
+        return position()
+      })
+      for (const animation of animations) animation.finish()
+      return { before, samples }
+    })
+
+    expect(Math.abs(samples.samples[0] - samples.before)).toBeLessThan(1)
+    const steps = samples.samples.slice(1).map((position, index) => Math.abs(position - samples.samples[index]))
+    expect(steps[1]).toBeGreaterThan(steps[0])
+    expect(steps[2]).toBeGreaterThan(steps[3])
+  }
 })
 
 test("the missing local image keeps a full-width placeholder when external scripts fail", async ({ page }) => {

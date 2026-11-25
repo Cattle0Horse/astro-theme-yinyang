@@ -49,11 +49,6 @@
 .reading > :first-child:not(hr) {
   margin-block-start: 0;
 }
-@media (prefers-reduced-motion: no-preference) {
-  html[data-toc-jump] {
-    scroll-behavior: smooth;
-  }
-}
 .reading [data-heading-target] {
   position: relative;
 }

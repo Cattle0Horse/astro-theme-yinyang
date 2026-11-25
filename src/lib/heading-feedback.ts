@@ -1,3 +1,5 @@
+import { scrollToReadingTarget } from "./reading-scroll"
+
 let highlighted: HTMLElement | undefined
 let timer = 0
 
@@ -17,12 +19,10 @@ export function clearHeadingFeedback() {
   window.clearTimeout(timer)
   highlighted?.removeAttribute("data-heading-target")
   highlighted = undefined
-  document.documentElement.removeAttribute("data-toc-jump")
 }
 
-function highlight(target: HTMLElement, smooth = false) {
+function highlight(target: HTMLElement) {
   clearHeadingFeedback()
-  if (smooth) document.documentElement.setAttribute("data-toc-jump", "")
   // Flush the removal so another activation can replay the arrow on the same heading.
   void target.offsetWidth
   target.setAttribute("data-heading-target", "")
@@ -45,7 +45,10 @@ document.addEventListener(
     if (!link?.hash || link.hasAttribute("download") || (link.target && link.target.toLowerCase() !== "_self")) return
     if (link.origin !== location.origin || link.pathname !== location.pathname || link.search !== location.search) return
     const heading = headingFor(link.hash)
-    if (heading) highlight(heading, true)
+    if (heading) {
+      highlight(heading)
+      scrollToReadingTarget(event, link, heading, "start")
+    }
   },
   // Start the feedback before Astro or the browser scrolls to the fragment.
   { capture: true }

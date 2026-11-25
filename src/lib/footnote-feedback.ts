@@ -1,7 +1,8 @@
+import { scrollToReadingTarget } from "./reading-scroll"
+
 const links = "a[data-footnote-ref], a[data-footnote-backref]"
 let current: HTMLElement | undefined
 let clear: (() => void) | undefined
-let frame = 0
 
 function targetFor(hash: string) {
   try {
@@ -47,13 +48,12 @@ function highlightClause(reference: HTMLElement) {
 }
 
 export function clearFootnoteFeedback() {
-  cancelAnimationFrame(frame)
   clear?.()
   clear = undefined
   current = undefined
 }
 
-function highlight(target: HTMLElement, center: boolean) {
+function highlight(target: HTMLElement) {
   clearFootnoteFeedback()
   current = target
   const reference = target.hasAttribute("data-footnote-ref")
@@ -72,14 +72,6 @@ function highlight(target: HTMLElement, center: boolean) {
     target.setAttribute("data-footnote-highlight", "")
     remove = () => target.removeAttribute("data-footnote-highlight")
   }
-  if (center) {
-    frame = requestAnimationFrame(() => {
-      if (target.getClientRects().length) {
-        const { top, height } = target.getBoundingClientRect()
-        window.scrollTo({ top: scrollY + top - (innerHeight - height) / 2, behavior: "instant" })
-      }
-    })
-  }
   const timeout = window.setTimeout(clearFootnoteFeedback, reference ? 3500 : 3000)
   clear = () => {
     window.clearTimeout(timeout)
@@ -90,7 +82,7 @@ function highlight(target: HTMLElement, center: boolean) {
 function highlightCurrentFragment() {
   const target = targetFor(location.hash)
   if (target === current) return
-  if (target) highlight(target, false)
+  if (target) highlight(target)
   else clearFootnoteFeedback()
 }
 
@@ -99,9 +91,11 @@ document.addEventListener(
   (event) => {
     if (event.defaultPrevented || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return
     const link = event.target instanceof Element ? event.target.closest<HTMLAnchorElement>(links) : null
-    if (!link || !link.getAttribute("href")?.startsWith("#")) return
+    if (!link || !link.getAttribute("href")?.startsWith("#") || link.hasAttribute("download") || (link.target && link.target.toLowerCase() !== "_self")) return
     const target = targetFor(link.hash)
-    if (target) highlight(target, true)
+    if (!target) return
+    highlight(target)
+    scrollToReadingTarget(event, link, target, "center")
   },
   { capture: true }
 )

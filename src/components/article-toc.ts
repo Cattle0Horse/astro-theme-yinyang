@@ -58,8 +58,7 @@ function mountToc(mobile: HTMLElement, article: HTMLElement) {
     (event) => {
       const target = event.target
       if (target === dialog || (target instanceof Element && target.closest(".toc-dialog-header button"))) closeDialog()
-      else if (target instanceof Element && target.closest("a") && !event.defaultPrevented && event.button === 0 && !event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey)
-        closeDialog()
+      else if (target instanceof Element && target.closest("a[href^='#']") && event.button === 0 && !event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey) closeDialog()
     },
     { signal }
   )
