@@ -5,6 +5,10 @@
 @import "./navigation.css";
 @import "./reader.css";
 
+@source "../components";
+@source "../layouts";
+@source "../routes";
+
 @media (min-width: 84rem) {
   html {
     scrollbar-width: thin;

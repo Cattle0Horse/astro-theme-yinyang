@@ -1,9 +1,10 @@
-export const site = {
+const defaults = {
   title: "YinYang",
   description: "在日常里阅读、思考和记录。",
   author: "YinYang",
   language: "zh-CN",
   timeZone: "Asia/Shanghai",
+  favicon: "logo.png",
   postsPerPage: 30,
   originalMarkdown: true,
   notFound: { available: [] as readonly string[] },
@@ -21,3 +22,23 @@ export const site = {
     { id: "graphite", name: "石墨" }
   ]
 } as const
+
+export interface ThemeOptions {
+  title?: string
+  description?: string
+  author?: string
+  language?: string
+  timeZone?: string
+  favicon?: string
+  postsPerPage?: number
+  originalMarkdown?: boolean
+  defaultPalette?: (typeof defaults.palettes)[number]["id"]
+  notFound?: { available: readonly string[] }
+  editPage?: { repository?: string; branch?: string }
+}
+
+declare const __YINYANG_OPTIONS__: ThemeOptions | undefined
+
+const options = typeof __YINYANG_OPTIONS__ === "undefined" ? {} : __YINYANG_OPTIONS__
+
+export const site = { ...defaults, ...options, editPage: { ...defaults.editPage, ...options.editPage } }

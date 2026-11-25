@@ -2,7 +2,21 @@
 
 用 Astro、React、TypeScript 和 Tailwind CSS 构建的静态 Blog 与 Notes。
 
-## 本地开发
+## 创建自己的站点
+
+主题发布到 npm、模板推送到 GitHub 后，用 Astro CLI 从仓库的 `starter/` 目录创建项目。将 `OWNER/REPO` 替换为主题仓库名。
+
+~~~sh
+pnpm create astro@latest my-blog --template OWNER/REPO/starter
+cd my-blog
+pnpm dev
+~~~
+
+在 `astro.config.ts` 的 `yinyang()` 中设置标题、描述和作者。模板内有一篇可删的入门文章。完整演示文章随主题仓库的演示站构建。
+
+升级时在站点仓库运行 `pnpm add -E astro-theme-yinyang@<版本>`，检查构建并提交更新后的依赖和锁文件。站点仓库持有自己的文章、附件和配置。
+
+## 主题仓库开发
 
 使用 Node 24 和 pnpm。
 
@@ -10,6 +24,8 @@
 pnpm install --frozen-lockfile
 pnpm dev
 ~~~
+
+发布前可以用 `pnpm pack` 生成本地 `.tgz`，再在模板副本中运行 `pnpm add <主题包绝对路径>`。`pnpm test:distribution` 会在临时目录验证主题包安装、构建和升级。
 
 ## 写作
 
@@ -32,7 +48,7 @@ pnpm exec playwright install chromium
 pnpm test:browser
 ~~~
 
-`pnpm build` 生成可直接托管的静态目录 `dist/`。部署时用 `SITE_URL` 设置站点地址，子目录部署再用 `SITE_BASE` 设置路径，例如 `/blog-theme`。标题、作者和配色等站点配置见 `src/site.config.ts`。
+`pnpm build` 生成可直接托管的静态目录 `dist/`。部署时用 `SITE_URL` 设置站点地址，子目录部署再用 `SITE_BASE` 设置路径，例如 `/blog-theme`。主题选项见 `src/site.config.ts` 的 `ThemeOptions`。
 
 设置 `SITE_EDIT_REPOSITORY`（`owner/repo`）和可选的 `SITE_EDIT_BRANCH`（默认 `main`）后，所有详情页都会用 Astro 提供的源文件路径生成编辑按钮和文末纠错链接。GitHub Actions 默认提供 `GITHUB_REPOSITORY`，也可用于生成链接。
 

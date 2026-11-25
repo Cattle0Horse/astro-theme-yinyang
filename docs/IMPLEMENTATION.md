@@ -4,7 +4,7 @@
 
 | 位置 | 职责 |
 | --- | --- |
-| `src/pages/`、`src/layouts/` | Astro 文件路由、布局、SEO 与静态输出。路由调用共用内容查询和 URL 逻辑。 |
+| `src/routes/`、`src/layouts/` | Astro 路由入口、布局、SEO 与静态输出。路由由 `src/integration.ts` 注册，调用共用内容查询和 URL 逻辑。 |
 | `src/content/`、`src/content.config.ts` | Markdown 源文与集合 schema。Posts 和 Notes 各自定义字段，通过 schema 推导数据类型。 |
 | `src/components/` | 用 Astro 输出静态视图。需要浏览器状态的部分用 React 和 TypeScript，按功能划分 island。 |
 | `src/lib/` | 内容、路径、Markdown 转换及浏览器辅助逻辑。文件系统和构建依赖留在构建端。 |
@@ -22,6 +22,10 @@
 - 公开页面、文件和 feed 共用发布筛选及 URL 生成。草稿从所有公开输出中排除。保留已发布 URL、标题锚点和 RSS 条目标识，根路径和子路径使用同一套路径规则。改动这些约定时，用现有站点产物核对兼容性。
 - 保持各方职责清楚。原文输出保留来源文件，复制操作只提供正文。普通链接、章节锚点和基础阅读在关闭 JavaScript 时可用。
 - 构建时输出目录和代码、表格控件，并标记脚注回跳的分句起点。浏览器绑定控件事件、定位当前章节并计算高亮矩形。旁注定位与代码折叠初始化仅随对应内容输出，正文复制在点击时读取独立的正文资源。
+
+## 主题包与站点模板
+
+`astro-theme-yinyang` 提供 integration 和集合定义。主题仓库的演示站和 `starter/` 共用这两处入口。`package.json` 的 `files` 声明主题包所需源码，演示内容、模板和回归样本留在仓库。站点持有自身的 Astro 配置和 Markdown。升级验证覆盖从 tarball 安装、子路径构建以及更新主题后的用户文件完整性。
 
 ## 互动 404
 

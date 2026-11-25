@@ -1,4 +1,1 @@
-catalog:
-  katex: ^0.19.1
-overrides:
-  rehype-katex>katex: "catalog:"
+packages: []
