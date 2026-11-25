@@ -1,8 +1,7 @@
 ---
 import NoteListing from "../../../../../components/NoteListing.astro"
-import { published, tagsFor } from "../../../../../lib/content"
+import { published, tagsFor, tagsPath } from "../../../../../lib/content"
 import { site } from "../../../../../site.config"
-import { basePath } from "../../../../../lib/content-format"
 import type { GetStaticPaths } from "astro"
 
 export const getStaticPaths = (async ({ paginate }) =>
@@ -11,4 +10,4 @@ export const getStaticPaths = (async ({ paginate }) =>
 const { label, page } = Astro.props
 ---
 
-<NoteListing title={"#" + label} entries={page.data} root={basePath("notes/tags/" + Astro.params.tag + "/")} current={page.currentPage} total={page.lastPage} />
+<NoteListing title={"#" + label} entries={page.data} root={tagsPath("notes", Astro.params.tag)} current={page.currentPage} total={page.lastPage} />

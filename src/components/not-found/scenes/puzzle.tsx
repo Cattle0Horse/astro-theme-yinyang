@@ -1,5 +1,5 @@
 import { useRef, useState, type MouseEvent } from "react"
-import { Scene, SceneStatus, type SceneProps } from "../Scene"
+import { Scene, type SceneProps } from "../Scene"
 import { useSceneMotion } from "../useSceneMotion"
 import type { Pose, Point } from "../scene-runtime"
 import styles from "./puzzle.css?inline"
@@ -38,7 +38,7 @@ export default function Puzzle({ home }: SceneProps) {
       const target = { x: on ? -61 : 0, y: on ? -87 : 0, angle: 0 }
       const speed = releaseVelocity || { x: 0, y: 0 }
       cancelSnap = tools.springTo(
-        pose,
+        pose(),
         writePose,
         target,
         {
@@ -117,7 +117,9 @@ export default function Puzzle({ home }: SceneProps) {
             </g>
           </svg>
         </button>
-        <SceneStatus className="nf-puzzle-status">{message}</SceneStatus>
+        <p role="status" className="nf-puzzle-status">
+          {message}
+        </p>
       </div>
       <a className="nf-puzzle-home" href={home} data-nf-home>
         ⌂ 回到完整的一页

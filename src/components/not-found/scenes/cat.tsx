@@ -1,5 +1,5 @@
 import { useRef, useState, type MouseEvent } from "react"
-import { Scene, SceneStatus, type SceneProps } from "../Scene"
+import { Scene, type SceneProps } from "../Scene"
 import { useSceneMotion } from "../useSceneMotion"
 import type { Pose } from "../scene-runtime"
 import styles from "./cat.css?inline"
@@ -110,7 +110,9 @@ export default function Cat({ home }: SceneProps) {
             <path className="nf-line nf-border-stroke" d="m90 43 5-12m-24 23-10-4m37 2 9-6" />
           </svg>
         </button>
-        <SceneStatus className="nf-cat-status">{message}</SceneStatus>
+        <p role="status" className="nf-cat-status">
+          {message}
+        </p>
       </div>
       <a className="nf-cat-home" href={home} data-nf-home>
         ⌂ 趁猫没注意，回家

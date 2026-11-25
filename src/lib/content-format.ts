@@ -1,12 +1,14 @@
 import { slug } from "github-slugger"
 import { site } from "../site.config"
 
+let dateTimeFormatter: Intl.DateTimeFormat | undefined
+
 export function dateParts(value: string) {
   if (value.length === 10) {
     const [year, month, day] = value.split("-")
     return { year, month, day, time: "" }
   }
-  const parts = new Intl.DateTimeFormat("en-CA", {
+  dateTimeFormatter ??= new Intl.DateTimeFormat("en-CA", {
     timeZone: site.timeZone,
     year: "numeric",
     month: "2-digit",
@@ -14,7 +16,8 @@ export function dateParts(value: string) {
     hour: "2-digit",
     minute: "2-digit",
     hourCycle: "h23"
-  }).formatToParts(new Date(value))
+  })
+  const parts = dateTimeFormatter.formatToParts(new Date(value))
   const get = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)?.value ?? ""
   return { year: get("year"), month: get("month"), day: get("day"), time: `${get("hour")}:${get("minute")}` }
 }

@@ -1,4 +1,4 @@
-import type { ComponentPropsWithRef, ReactNode } from "react"
+import type { ReactNode } from "react"
 
 export interface ArticleLink {
   title: string
@@ -18,8 +18,4 @@ export function Scene({ name, title, styles, children }: { name: string; title: 
       {children}
     </section>
   )
-}
-
-export function SceneStatus(props: ComponentPropsWithRef<"p">) {
-  return <p role="status" {...props} />
 }

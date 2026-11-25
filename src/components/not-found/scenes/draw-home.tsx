@@ -1,6 +1,6 @@
 import { useRef, useState } from "react"
 import { navigate } from "astro:transitions/client"
-import { Scene, SceneStatus, type SceneProps } from "../Scene"
+import { Scene, type SceneProps } from "../Scene"
 import { useSceneMotion } from "../useSceneMotion"
 import type { Point } from "../scene-runtime"
 import styles from "./draw-home.css?inline"
@@ -70,9 +70,7 @@ export default function DrawHome({ home }: SceneProps) {
       if (options && options.instant) moveBall(start)
       else
         cancelReset = tools.springTo(
-          function () {
-            return current
-          },
+          current,
           moveBall,
           start,
           {
@@ -122,8 +120,7 @@ export default function DrawHome({ home }: SceneProps) {
           addPoint(p)
           run()
         }
-      },
-      { captureTarget: svg }
+      }
     )
     tools.listen(house, "click", function (event) {
       if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
@@ -228,9 +225,9 @@ export default function DrawHome({ home }: SceneProps) {
           />
         </svg>
       </div>
-      <SceneStatus ref={statusRef} className="nf-draw-home-status">
+      <p role="status" ref={statusRef} className="nf-draw-home-status">
         {message}
-      </SceneStatus>
+      </p>
     </Scene>
   )
 }

@@ -1,3 +1,6 @@
+import { animateCodeHeight } from "./code-block"
+import { copyFeedbackDuration, copyStatus } from "./copy-state"
+
 export function mountReadingActions(article: HTMLElement) {
   const controller = new AbortController()
   const { signal } = controller
@@ -11,8 +14,8 @@ export function mountReadingActions(article: HTMLElement) {
     window.clearTimeout(timers.get(button))
     const message = button.parentElement?.querySelector('[role="status"]')
     button.dataset.copyState = "pending"
-    button.dataset.tooltip = "正在复制"
-    if (message) message.textContent = "正在复制"
+    button.dataset.tooltip = copyStatus.pending
+    if (message) message.textContent = copyStatus.pending
     let state: "success" | "error"
     try {
       await navigator.clipboard.writeText(text)
@@ -21,7 +24,7 @@ export function mountReadingActions(article: HTMLElement) {
       state = "error"
     }
     if (signal.aborted || pending.get(button) !== operation) return
-    const status = state === "success" ? "已复制" : "复制失败"
+    const status = copyStatus[state]
     button.dataset.tooltip = status
     button.dataset.copyState = state
     if (message) message.textContent = status
@@ -32,7 +35,7 @@ export function mountReadingActions(article: HTMLElement) {
         button.dataset.tooltip = button.getAttribute("aria-label") ?? ""
         delete button.dataset.copyState
         if (message) message.textContent = ""
-      }, 1800)
+      }, copyFeedbackDuration)
     )
   }
 
@@ -54,25 +57,16 @@ export function mountReadingActions(article: HTMLElement) {
         button.setAttribute("aria-pressed", String(enabled))
         button.setAttribute("aria-label", enabled ? "隐藏行号" : "显示行号")
       } else if (action === "wrap") {
-        const height = pre.getBoundingClientRect().height
-        pre
-          .getAnimations()
-          .filter((animation) => animation.id === "code-motion")
-          .forEach((animation) => animation.cancel())
-        const enabled = pre.toggleAttribute("data-wrap")
-        if (enabled) pre.scrollLeft = 0
-        button.setAttribute("aria-pressed", String(enabled))
-        button.setAttribute("aria-label", enabled ? "关闭自动换行" : "开启自动换行")
-        const next = pre.getBoundingClientRect().height
-        if (height !== next && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
-          const animation = pre.animate({ height: [height + "px", next + "px"], maxHeight: [height + "px", next + "px"] }, { duration: 220, easing: "cubic-bezier(.22,1,.36,1)" })
-          animation.id = "code-motion"
-          pre.setAttribute("data-code-motion", "")
-          const clean = () => {
-            if (!pre.getAnimations().some((other) => other.id === "code-motion" && other.playState === "running")) pre.removeAttribute("data-code-motion")
-          }
-          void animation.finished.then(clean, clean)
-        }
+        animateCodeHeight(
+          pre,
+          () => {
+            const enabled = pre.toggleAttribute("data-wrap")
+            if (enabled) pre.scrollLeft = 0
+            button.setAttribute("aria-pressed", String(enabled))
+            button.setAttribute("aria-label", enabled ? "关闭自动换行" : "开启自动换行")
+          },
+          220
+        )
       }
       button.dataset.tooltip = button.getAttribute("aria-label") ?? ""
     },

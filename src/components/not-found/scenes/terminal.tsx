@@ -2,7 +2,7 @@ import { useId, useLayoutEffect, useRef, useState, type SubmitEvent } from "reac
 import { navigate } from "astro:transitions/client"
 import { CornerDownLeft } from "lucide-react"
 import { IconButton } from "../../ui/IconButton"
-import { Scene, SceneStatus, type SceneProps } from "../Scene"
+import { Scene, type SceneProps } from "../Scene"
 import styles from "./terminal.css?inline"
 
 interface Line {
@@ -94,7 +94,9 @@ export default function Terminal({ home, articles }: SceneProps) {
             </IconButton>
           </form>
           <div className="nf-terminal-footer">
-            <SceneStatus className="nf-terminal-status">路径不存在，好奇心仍可执行</SceneStatus>
+            <p role="status" className="nf-terminal-status">
+              路径不存在，好奇心仍可执行
+            </p>
             <a className="nf-terminal-home" href={home} data-nf-home>
               $ cd ~ <span aria-hidden="true">↵</span>
             </a>

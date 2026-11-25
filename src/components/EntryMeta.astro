@@ -1,28 +1,24 @@
 ---
-import { dateLabel, entryTags, tagsPath } from "../lib/content"
+import { entryTags, tagsPath } from "../lib/content"
+import { dateParts, tagId } from "../lib/content-format"
 import type { Entry } from "../lib/content"
 
 interface Props {
   entry: Entry
-  href?: string
 }
 
-const { entry, href } = Astro.props
+const { entry } = Astro.props
 const { date } = entry.data
+const { year, month, day, time } = dateParts(date)
+const dateLabel = `${year}.${month}.${day}${time ? ` · ${time}` : ""}`
 ---
 
 <div class="entry-meta">
-  {href ? (
-    <a href={href} class="entry-date">
-      <time datetime={date}>{dateLabel(date, true)}</time>
-    </a>
-  ) : (
-    <time class="entry-date" datetime={date} data-entry-part="time">
-      {dateLabel(date, true)}
-    </time>
-  )}
+  <time class="entry-date" datetime={date} data-entry-part="time">
+    {dateLabel}
+  </time>
   {entryTags(entry).map((tag) => (
-    <a class="tag-link" href={tagsPath(entry.collection, tag)}>
+    <a class="tag-link" href={tagsPath(entry.collection, tagId(tag))}>
       #{tag}
     </a>
   ))}

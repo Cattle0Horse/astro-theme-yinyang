@@ -1,6 +1,6 @@
 import { useRef, useState, type MouseEvent } from "react"
 import { navigate } from "astro:transitions/client"
-import { Scene, SceneStatus, type SceneProps } from "../Scene"
+import { Scene, type SceneProps } from "../Scene"
 import { useSceneMotion } from "../useSceneMotion"
 import type { Point } from "../scene-runtime"
 import styles from "./sleep.css?inline"
@@ -203,7 +203,9 @@ export default function Sleep({ home }: SceneProps) {
             <ellipse className="nf-soft" cx="200" cy="216" rx="110" ry="7" />
           </svg>
         </button>
-        <SceneStatus className="nf-sleep-status">{message}</SceneStatus>
+        <p role="status" className="nf-sleep-status">
+          {message}
+        </p>
       </div>
       <a ref={homeLinkRef} className="nf-sleep-home" aria-disabled={leavingPage || undefined} href={home} data-nf-home>
         ☾ 让它睡吧，回家

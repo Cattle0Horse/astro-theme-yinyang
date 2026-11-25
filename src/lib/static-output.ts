@@ -5,6 +5,7 @@ import rss from "@astrojs/rss"
 import { entryPath, entryTags, entryTitle, published } from "./content"
 import type { Entry, Section } from "./content"
 import { basePath } from "./content-format"
+import { isRelativeResource } from "./markdown/resources"
 import { site } from "../site.config"
 
 const types: Record<string, string> = {
@@ -27,13 +28,16 @@ export async function feed(section: Section, origin: URL) {
     title: section === "notes" ? site.title + " · Notes" : site.title,
     description: site.description,
     customData: "<language>" + site.language + "</language>",
-    items: entries.map((entry) => ({
-      title: entryTitle(entry),
-      description: entry.data.description || entryTitle(entry),
-      link: new URL(entryPath(entry), origin).href,
-      pubDate: new Date(entry.data.date),
-      categories: entryTags(entry)
-    }))
+    items: entries.map((entry) => {
+      const title = entryTitle(entry)
+      return {
+        title,
+        description: entry.data.description || title,
+        link: new URL(entryPath(entry), origin).href,
+        pubDate: new Date(entry.data.date),
+        categories: entryTags(entry)
+      }
+    })
   })
 }
 
@@ -50,7 +54,7 @@ export async function staticFiles() {
     const { remarkPluginFrontmatter } = await render(entry)
     const references: unknown = remarkPluginFrontmatter.assetReferences
     for (const href of [...(Array.isArray(references) ? references : []), entry.data.cover]) {
-      if (typeof href !== "string") continue
+      if (!isRelativeResource(href)) continue
       const asset = await localAttachment(source, href)
       if (asset) add(entry, asset.path, { file: asset.file })
     }
@@ -67,7 +71,6 @@ export async function staticFiles() {
 }
 
 async function localAttachment(source: string, href: string) {
-  if (/^(?:#|\?|\/|[a-z][a-z+\d.-]*:)/iu.test(href)) return
   let path: string
   try {
     path = decodeURIComponent(href.split(/[?#]/u, 1)[0]).replaceAll("\\", "/")

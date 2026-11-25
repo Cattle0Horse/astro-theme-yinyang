@@ -1,5 +1,5 @@
 import { useRef, useState, type MouseEvent } from "react"
-import { Scene, SceneStatus, type SceneProps } from "../Scene"
+import { Scene, type SceneProps } from "../Scene"
 import { useSceneMotion } from "../useSceneMotion"
 import styles from "./constellation.css?inline"
 
@@ -126,7 +126,9 @@ export default function Constellation({ home }: SceneProps) {
             </text>
           </svg>
         </button>
-        <SceneStatus className="nf-constellation-status">{message}</SceneStatus>
+        <p role="status" className="nf-constellation-status">
+          {message}
+        </p>
       </div>
       <a className="nf-constellation-home" href={home} data-nf-home>
         ✧ ─ ─ ⌂ 归航

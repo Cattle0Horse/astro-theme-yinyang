@@ -58,7 +58,7 @@ export function createSceneMotion(svg: SVGSVGElement) {
   }
 
   function point(event: MouseEvent): Point {
-    const matrix = svg?.getScreenCTM()
+    const matrix = svg.getScreenCTM()
     if (!matrix) return { x: 0, y: 0 }
     return new DOMPoint(event.clientX, event.clientY).matrixTransform(matrix.inverse())
   }
@@ -71,11 +71,9 @@ export function createSceneMotion(svg: SVGSVGElement) {
     target: Element | Document,
     start: (p: Point, event: PointerEvent) => boolean | void,
     move: (p: Point, origin: Point) => void,
-    end: (p: Point, origin: Point, moved: boolean, cancelled: boolean, velocity: Point) => void,
-    options?: { captureTarget: Element }
+    end: (p: Point, origin: Point, moved: boolean, cancelled: boolean, velocity: Point) => void
   ) {
-    const capture = options?.captureTarget ?? (target instanceof Element ? target : svg)
-    if (!capture) return
+    const capture = target instanceof Element ? target : svg
     let dragState: { id: number; origin: Point; previous: Point; time: number; velocity: Point; moved: boolean } | undefined
     listen(target, "pointerdown", (event) => {
       if (!event.isPrimary || event.button !== 0 || dragState) return
@@ -138,9 +136,9 @@ export function createSceneMotion(svg: SVGSVGElement) {
     return cancel
   }
 
-  function springTo<T extends Point>(read: () => T, write: (value: T) => void, target: T, options: SpringOptions<T>, complete?: () => void) {
+  function springTo<T extends Point>(from: T, write: (value: T) => void, target: T, options: SpringOptions<T>, complete?: () => void) {
     const keys = Object.keys(target) as (keyof T)[]
-    const current = { ...read() }
+    const current = { ...from }
     const velocity = { ...options.velocity } as Partial<T>
     const { stiffness = 0.18, damping = 0.66, threshold = 0.15, speedThreshold = 0.02 } = options
     let frame = 0
@@ -179,7 +177,6 @@ export function createSceneMotion(svg: SVGSVGElement) {
   }
 
   function emit(x: number, y: number, count: number) {
-    if (!svg) return
     for (let i = 0; i < count; i++) {
       const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle")
       dot.setAttribute("cx", String(x))

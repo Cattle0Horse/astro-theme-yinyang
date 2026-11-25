@@ -1,5 +1,5 @@
 import { useRef, useState } from "react"
-import { Scene, SceneStatus, type SceneProps } from "../Scene"
+import { Scene, type SceneProps } from "../Scene"
 import { useSceneMotion } from "../useSceneMotion"
 import type { SceneMotion } from "../scene-runtime"
 import styles from "./black-hole.css?inline"
@@ -58,7 +58,9 @@ export default function BlackHole({ home }: SceneProps) {
             </g>
           </svg>
         </button>
-        <SceneStatus className="nf-black-hole-status">{message}</SceneStatus>
+        <p role="status" className="nf-black-hole-status">
+          {message}
+        </p>
       </div>
       <a className="nf-black-hole-exit" href={home} data-nf-home>
         ↗ 脱离引力

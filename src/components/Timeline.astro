@@ -1,20 +1,17 @@
 ---
-import { dateParts } from "../lib/content-format"
-import { dateLabel, entryPath, entryTags, entryTitle, tagsPath } from "../lib/content"
+import { dateParts, tagId } from "../lib/content-format"
+import { entryPath, entryTitle, tagsPath } from "../lib/content"
 import type { Entry } from "../lib/content"
 import EntryContent from "./EntryContent.astro"
 import NoteSources from "./NoteSources.astro"
 
 interface Props {
   entries: Entry[]
-  notes?: boolean
 }
 
-const { entries, notes = false } = Astro.props
-const groups = Map.groupBy(entries, ({ data }) => {
-  const { year, month } = dateParts(data.date)
-  return notes ? year + " / " + month : year
-})
+const { entries } = Astro.props
+const datedEntries = entries.map((entry) => ({ entry, date: dateParts(entry.data.date) }))
+const groups = Map.groupBy(datedEntries, ({ entry, date }) => (entry.collection === "notes" ? `${date.year} / ${date.month}` : date.year))
 ---
 
 <div class="timeline">
@@ -22,15 +19,14 @@ const groups = Map.groupBy(entries, ({ data }) => {
   {[...groups].map(([label, group]) => (
     <section class="timeline-group">
       <h2 class="timeline-heading">{label}</h2>
-      {group.map((entry) => {
+      {group.map(({ entry, date: { month, day, time } }) => {
         const href = entryPath(entry)
-        const time = dateParts(entry.data.date).time
-        const tags = entryTags(entry)
+        const dateLabel = `${month}.${day}`
         return entry.collection === "notes" ? (
           <article class="timeline-item note-entry" data-entry-preview={href}>
             <a class="note-entry-time" href={href}>
               <time datetime={entry.data.date} data-entry-part="time">
-                {dateLabel(entry.data.date)}
+                {dateLabel}
                 {time && " · " + time}
               </time>
             </a>
@@ -43,10 +39,10 @@ const groups = Map.groupBy(entries, ({ data }) => {
             )}
             <NoteSources source={entry.data.source} />
             <EntryContent entry={entry} embedded />
-            {tags.length > 0 && (
+            {entry.data.note_tags.length > 0 && (
               <div class="note-tags" aria-label="标签">
-                {tags.map((tag) => (
-                  <a class="tag-link" href={tagsPath("notes", tag)}>
+                {entry.data.note_tags.map((tag) => (
+                  <a class="tag-link" href={tagsPath("notes", tagId(tag))}>
                     #{tag}
                   </a>
                 ))}
@@ -56,7 +52,7 @@ const groups = Map.groupBy(entries, ({ data }) => {
         ) : (
           <div class="timeline-item entry-line" data-entry-preview={href}>
             <time class="entry-date" datetime={entry.data.date} data-entry-part="time">
-              {dateLabel(entry.data.date)}
+              {dateLabel}
             </time>
             <a href={href} class="entry-name">
               <span data-entry-part="title">{entryTitle(entry)}</span>

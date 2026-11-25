@@ -1,5 +1,5 @@
 import { useRef, useState, type MouseEvent } from "react"
-import { Scene, SceneStatus, type SceneProps } from "../Scene"
+import { Scene, type SceneProps } from "../Scene"
 import { useSceneMotion } from "../useSceneMotion"
 import type { Pose } from "../scene-runtime"
 import styles from "./receipt.css?inline"
@@ -94,7 +94,7 @@ export default function Receipt({ home }: SceneProps) {
         else {
           const speed = releaseVelocity || { x: 0, y: 0 }
           cancelReturn = tools.springTo(
-            pose,
+            pose(),
             writePose,
             { x: 0, y: 0, angle: 0 },
             {
@@ -165,9 +165,9 @@ export default function Receipt({ home }: SceneProps) {
             </g>
           </svg>
         </button>
-        <SceneStatus className="nf-receipt-status" aria-label={message ? "已重新开票，原因：" + reason : undefined}>
+        <p role="status" className="nf-receipt-status" aria-label={message ? "已重新开票，原因：" + reason : undefined}>
           {message}
-        </SceneStatus>
+        </p>
       </div>
       <a className="nf-receipt-home" href={home} data-nf-home>
         离店 → 首页

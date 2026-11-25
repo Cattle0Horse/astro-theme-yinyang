@@ -15,8 +15,8 @@ export const GET: APIRoute = async ({ site }) => {
     tagsPath("notes"),
     ...posts.map(entryPath),
     ...notes.map(entryPath),
-    ...tagsFor(posts).map(({ label }) => tagsPath("posts", label)),
-    ...tagsFor(notes).map(({ label }) => tagsPath("notes", label))
+    ...tagsFor(posts).map(({ id }) => tagsPath("posts", id)),
+    ...tagsFor(notes).map(({ id }) => tagsPath("notes", id))
   ]
   const unique = [...new Set(urls)]
   const body = unique.map((path) => "  <url><loc>" + escapeXml(new URL(path, origin).href) + "</loc></url>").join("\n")

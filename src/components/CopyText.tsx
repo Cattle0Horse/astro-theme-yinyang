@@ -1,14 +1,12 @@
 import { useEffect, useRef, useState } from "react"
+import { copyFeedbackDuration, copyStatus, type CopyState } from "../lib/copy-state"
 import { CopyFeedback } from "./ui/CopyFeedback"
 import { IconButton } from "./ui/IconButton"
 
-export async function copyText(text: string) {
-  await navigator.clipboard.writeText(text)
-}
-
-export default function CopyText({ source, label = "复制正文 Markdown" }: { source: string; label?: string }) {
-  const [state, setState] = useState<"pending" | "success" | "error">()
-  const status = state === "pending" ? "正在复制" : state === "success" ? "已复制" : state === "error" ? "复制失败" : ""
+export default function CopyText({ source }: { source: string }) {
+  const label = "复制正文 Markdown"
+  const [state, setState] = useState<CopyState>()
+  const status = state ? copyStatus[state] : ""
   const timer = useRef(0)
   const operation = useRef(0)
   useEffect(
@@ -25,22 +23,22 @@ export default function CopyText({ source, label = "复制正文 Markdown" }: { 
     setState("pending")
     let result: "success" | "error"
     try {
-      const response = fetch(source).then((result) => {
-        if (!result.ok) throw new Error("Could not load Markdown")
-        return result.blob()
+      const markdown = fetch(source).then((response) => {
+        if (!response.ok) throw new Error("Could not load Markdown")
+        return response.text()
       })
       if (typeof ClipboardItem !== "undefined" && navigator.clipboard.write) {
-        const text = response.then(async (blob) => new Blob([await blob.text()], { type: "text/plain" }))
+        const text = markdown.then((value) => new Blob([value], { type: "text/plain" }))
         void text.catch(() => {})
         await navigator.clipboard.write([new ClipboardItem({ "text/plain": text })])
-      } else await copyText(await (await response).text())
+      } else await navigator.clipboard.writeText(await markdown)
       result = "success"
     } catch {
       result = "error"
     }
     if (current !== operation.current) return
     setState(result)
-    timer.current = window.setTimeout(() => setState(undefined), 1800)
+    timer.current = window.setTimeout(() => setState(undefined), copyFeedbackDuration)
   }
 
   return (

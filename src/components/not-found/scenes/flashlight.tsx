@@ -1,5 +1,5 @@
 import { useRef, useState, type MouseEvent } from "react"
-import { Scene, SceneStatus, type SceneProps } from "../Scene"
+import { Scene, type SceneProps } from "../Scene"
 import { useSceneMotion } from "../useSceneMotion"
 import type { Point } from "../scene-runtime"
 import styles from "./flashlight.css?inline"
@@ -78,8 +78,7 @@ export default function Flashlight({ home }: SceneProps) {
       shine,
       function (_p, _origin, moved) {
         if (moved) ignoreClickUntil = performance.now() + 400
-      },
-      { captureTarget: tools.svg }
+      }
     )
 
     function toggleGhost() {
@@ -159,9 +158,9 @@ export default function Flashlight({ home }: SceneProps) {
             <path className="nf-line nf-border-stroke" d="M77 28h9m-4.5-4.5v9m246 161h9m-4.5-4.5v9" />
           </svg>
         </button>
-        <SceneStatus ref={statusRef} className="nf-flashlight-status">
+        <p role="status" ref={statusRef} className="nf-flashlight-status">
           {message}
-        </SceneStatus>
+        </p>
       </div>
       <a className="nf-flashlight-home" href={home} data-nf-home>
         ⌂ 出口在这里

@@ -20,7 +20,7 @@ const numbered = (page: number) => (page === 1 ? root : root + "page/" + page + 
 <SiteLayout title={title}>
   <section class="shell">
     <h1 class="section-title">{title}</h1>
-    <Timeline entries={entries} notes />
+    <Timeline entries={entries} />
     {total > 1 && (
       <nav class="notes-pagination" aria-label="分页">
         {current > 1 ? (

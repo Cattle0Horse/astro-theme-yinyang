@@ -1,5 +1,5 @@
 import { useRef, useState } from "react"
-import { Scene, SceneStatus, type SceneProps } from "../Scene"
+import { Scene, type SceneProps } from "../Scene"
 import { useSceneMotion } from "../useSceneMotion"
 import styles from "./channel.css?inline"
 
@@ -48,7 +48,9 @@ export default function Channel({ home, articles }: SceneProps) {
               FM 404
             </text>
           </svg>
-          <SceneStatus className="nf-channel-status">{message}</SceneStatus>
+          <p role="status" className="nf-channel-status">
+            {message}
+          </p>
         </div>
         <label className="nf-tuner-label">
           <span className="nf-frequency">{frequency.toFixed(1)} MHz</span>

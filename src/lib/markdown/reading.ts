@@ -1,7 +1,7 @@
 import type { Element, Root } from "hast"
 import { fromHtml } from "hast-util-from-html"
 import { visit } from "unist-util-visit"
-import { imageCandidates } from "./resources"
+import { imageCandidates, isRelativeResource } from "./resources"
 
 export function rehypeReading() {
   return (tree: Root, file: { data: { astro?: { frontmatter?: Record<string, unknown> } } }) => {
@@ -9,7 +9,7 @@ export function rehypeReading() {
     const collect = ({ properties }: Element) => {
       const candidates = typeof properties.srcSet === "string" ? imageCandidates(properties.srcSet).map(({ source }) => source.value) : []
       for (const value of [properties.src, properties.href, properties.poster, ...candidates]) {
-        if (typeof value === "string" && !/^(?:#|\?|\/|[a-z][a-z+\d.-]*:)/iu.test(value)) assets.add(value)
+        if (isRelativeResource(value)) assets.add(value)
       }
     }
     visit(tree, (node: Element | { type: string; value?: unknown }) => {

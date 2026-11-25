@@ -6,7 +6,7 @@ import { entryPath, entryTitle } from "../lib/content"
 import { articleMarkup, articleScope } from "../lib/markup"
 import Reader from "./Reader"
 import { enhanceSidenotes } from "../lib/sidenotes-reader"
-import { startCodeFolds } from "../lib/code-block"
+import { animateCodeHeight, startCodeFolds } from "../lib/code-block"
 import { startImageLoading } from "../lib/image-reader"
 
 interface Props {
@@ -95,7 +95,7 @@ const links = toc.map(({ depth, slug, text }) => ({ depth, href: "#" + encodeURI
   })()`}
   ></script>
 )}
-{article.hasCode && <script is:inline set:html={"(" + startCodeFolds.toString() + ")()"}></script>}
+{article.hasCode && <script is:inline set:html={`(${startCodeFolds.toString()})(${animateCodeHeight.toString()})`}></script>}
 {article.hasImages && <script is:inline set:html={"(" + startImageLoading.toString() + ")()"}></script>}
 {(article.hasSidenotes || article.hasCode || article.hasImages) && <script is:inline data-astro-rerun define:vars={{ scope }}>
   document.getElementById(scope)?.dispatchEvent(new Event("yinyang:reading", { bubbles: true }))

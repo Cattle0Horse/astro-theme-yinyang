@@ -1,5 +1,5 @@
 import { getCollection, type CollectionEntry } from "astro:content"
-import { basePath, dateParts, tagId } from "./content-format"
+import { basePath, tagId } from "./content-format"
 
 export type Section = "posts" | "notes"
 
@@ -18,13 +18,13 @@ export function entryTags(entry: Entry): string[] {
   return entry.collection === "posts" ? entry.data.tags : entry.data.note_tags
 }
 
-export function tagsPath(section: Section, tag?: string) {
+export function tagsPath(section: Section, id?: string) {
   const root = section === "posts" ? "tags/" : "notes/tags/"
-  return basePath(tag ? `${root}${tagId(tag)}/` : root)
+  return basePath(id ? `${root}${id}/` : root)
 }
 
-export function tagsFor(entries: Entry[]) {
-  const tags = new Map<string, { label: string; entries: Entry[] }>()
+export function tagsFor<T extends Entry>(entries: readonly T[]) {
+  const tags = new Map<string, { label: string; entries: T[] }>()
   for (const entry of entries) {
     const seen = new Set<string>()
     for (const label of entryTags(entry)) {
@@ -50,11 +50,6 @@ export function entryTitle(entry: Entry) {
       .slice(0, 72) ||
     "短记"
   )
-}
-
-export function dateLabel(value: string, detailed = false) {
-  const { year, month, day, time } = dateParts(value)
-  return detailed ? `${year}.${month}.${day}${time ? ` · ${time}` : ""}` : `${month}.${day}`
 }
 
 export function sourcesFor(source?: string | string[]) {
