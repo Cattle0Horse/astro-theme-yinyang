@@ -112,11 +112,7 @@ export default function Appearance({ initial, palettes }: Props) {
         <ALargeSmall aria-hidden="true" />
       </IconButton>
       <div id="font-menu" className="appearance-menu font-menu" role="group" aria-label="字号" popover="auto" onToggle={focusMenu}>
-        <label className="font-control">
-          <span>字号</span>
-          <input type="range" min="14" max="18" step="1" aria-label="全站字号" value={current.size} onChange={(event) => update({ size: event.currentTarget.valueAsNumber as FontSize })} />
-          <output>{current.size}</output>
-        </label>
+        <input type="range" min="14" max="18" step="1" aria-label="全站字号" value={current.size} onChange={(event) => update({ size: event.currentTarget.valueAsNumber as FontSize })} />
       </div>
     </div>
   )

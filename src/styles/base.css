@@ -549,24 +549,11 @@ a {
   --menu-width: 188px;
   padding: 8px 10px;
 }
-.font-control {
-  display: grid;
-  grid-template-columns: auto minmax(3rem, 1fr) 2ch;
-  align-items: center;
-  gap: 0.5rem;
-}
-.font-control span {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.28rem;
-  white-space: nowrap;
-}
-.font-control input {
-  min-width: 0;
+.font-menu input {
+  display: block;
   width: 100%;
   accent-color: var(--accent);
 }
-.font-control output,
 .entry-date {
   font-variant-numeric: tabular-nums;
 }
