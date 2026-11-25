@@ -69,6 +69,9 @@
 .copy-error {
   color: var(--ink);
 }
+:where(.math-actions) .copy-feedback > svg {
+  transition-property: opacity, filter, transform;
+}
 .ui-tooltip {
   position: fixed;
   inset: auto;

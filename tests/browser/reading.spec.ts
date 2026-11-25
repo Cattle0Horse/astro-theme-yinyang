@@ -466,6 +466,33 @@ test("display math reveals a ghost copy button and copies its TeX source", async
   await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(source)
 })
 
+test("formula copy displays one icon when clipboard states change quickly", async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator.clipboard, "writeText", {
+      value: () => new Promise<void>((resolve) => window.setTimeout(resolve, 65))
+    })
+  })
+  await page.goto("/posts/math-demo/")
+  const formula = page.locator(".katex-display").first()
+  await formula.locator(".katex-html").hover()
+  const copy = formula.getByRole("button", { name: "复制公式" })
+  const visibleIcons = await copy.evaluate(async (button) => {
+    const counts: number[] = []
+    return new Promise<number[]>((resolve) => {
+      const observer = new MutationObserver(() => {
+        counts.push([...button.querySelectorAll("svg")].filter((icon) => getComputedStyle(icon).visibility === "visible").length)
+        if (button.getAttribute("data-copy-state") === "success") {
+          observer.disconnect()
+          resolve(counts)
+        }
+      })
+      observer.observe(button, { attributes: true, attributeFilter: ["data-copy-state"] })
+      if (button instanceof HTMLButtonElement) button.click()
+    })
+  })
+  expect(visibleIcons).toEqual([1, 1])
+})
+
 test("wide math keeps its copy button within the viewport while scrolling", async ({ context, page }) => {
   await context.grantPermissions(["clipboard-read", "clipboard-write"])
   await page.setViewportSize({ width: 320, height: 800 })
