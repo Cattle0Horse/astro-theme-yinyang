@@ -1,0 +1,9 @@
+---
+import NoteListing from "../../components/NoteListing.astro"
+import { published } from "../../lib/content"
+import { site } from "../../site.config"
+
+const notes = await published("notes")
+---
+
+<NoteListing title="Notes" entries={notes.slice(0, site.postsPerPage)} total={Math.ceil(notes.length / site.postsPerPage)} />

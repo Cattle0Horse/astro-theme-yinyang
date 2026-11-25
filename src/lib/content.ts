@@ -1,0 +1,73 @@
+import { getCollection, type CollectionEntry } from "astro:content"
+import { basePath, dateParts, tagId } from "./content-format"
+
+export type Section = "posts" | "notes"
+
+export type Entry = CollectionEntry<Section>
+
+export async function published<T extends Section>(section: T) {
+  const entries = await getCollection(section, ({ data }) => !data.draft)
+  return entries.sort((a, b) => Date.parse(b.data.date) - Date.parse(a.data.date) || b.id.localeCompare(a.id))
+}
+
+export function entryPath(entry: Entry) {
+  return basePath(`${entry.collection}/${entry.id.split("/").map(encodeURIComponent).join("/")}/`)
+}
+
+export function entryTags(entry: Entry): string[] {
+  return entry.collection === "posts" ? entry.data.tags : entry.data.note_tags
+}
+
+export function tagsPath(section: Section, tag?: string) {
+  const root = section === "posts" ? "tags/" : "notes/tags/"
+  return basePath(tag ? `${root}${tagId(tag)}/` : root)
+}
+
+export function tagsFor(entries: Entry[]) {
+  const tags = new Map<string, { label: string; entries: Entry[] }>()
+  for (const entry of entries) {
+    const seen = new Set<string>()
+    for (const label of entryTags(entry)) {
+      const id = tagId(label)
+      if (seen.has(id)) continue
+      seen.add(id)
+      const group = tags.get(id) ?? { label, entries: [] }
+      group.entries.push(entry)
+      tags.set(id, group)
+    }
+  }
+  return Array.from(tags, ([id, group]) => ({ id, ...group })).sort((a, b) => a.label.localeCompare(b.label, "zh-CN"))
+}
+
+export function entryTitle(entry: Entry) {
+  return (
+    entry.data.title ||
+    entry.body
+      ?.replace(/<!--[^]*?-->/gu, "")
+      .trim()
+      .split(/\r?\n/u)[0]
+      ?.replace(/^[#>\s]+/u, "")
+      .slice(0, 72) ||
+    "短记"
+  )
+}
+
+export function dateLabel(value: string, detailed = false) {
+  const { year, month, day, time } = dateParts(value)
+  return detailed ? `${year}.${month}.${day}${time ? ` · ${time}` : ""}` : `${month}.${day}`
+}
+
+export function sourcesFor(source?: string | string[]) {
+  return (Array.isArray(source) ? source : source ? [source] : [])
+    .map((value) => {
+      const source = value.trim()
+      const match = /^\[([^\]]+)\]\((https?:\/\/[^)]+)\)$/u.exec(source)
+      const url = match?.[2] ?? source
+      if (/^https?:\/\//u.test(url)) {
+        const parsed = URL.parse(url)
+        if (parsed) return { label: match?.[1] ?? parsed.host, url }
+      }
+      return { label: source, url: undefined }
+    })
+    .filter(({ label }) => label.trim())
+}

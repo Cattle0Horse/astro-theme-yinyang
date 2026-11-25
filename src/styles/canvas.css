@@ -1,0 +1,17 @@
+:root {
+  color-scheme: light;
+  --paper: oklch(98% 0.012 85);
+  background-color: var(--paper);
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --paper: oklch(22% 0.005 298);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    color-scheme: dark;
+    --paper: oklch(22% 0.005 298);
+  }
+}

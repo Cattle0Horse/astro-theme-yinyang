@@ -1,0 +1,33 @@
+---
+import { sourcesFor } from "../lib/content"
+
+interface Props {
+  source?: string | string[]
+}
+
+const sources = sourcesFor(Astro.props.source)
+---
+
+{sources.length > 0 && (
+  <div class="note-sources" aria-label="来源">
+    {sources.map(({ label, url }, index) => (
+      <>
+        {index > 0 && (
+          <span class="note-source-separator" aria-hidden="true">
+            ·
+          </span>
+        )}
+        {url ? (
+          <a class="note-source" href={url} target="_blank" rel="noopener noreferrer">
+            <span aria-hidden="true">↗</span>
+            <span>{label}</span>
+          </a>
+        ) : (
+          <span class="note-source">
+            <span>{label}</span>
+          </span>
+        )}
+      </>
+    ))}
+  </div>
+)}

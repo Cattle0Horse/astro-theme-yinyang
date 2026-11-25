@@ -1,0 +1,102 @@
+---
+import type { MarkdownHeading } from "astro"
+import { ImageOff, List, X } from "lucide-react"
+import type { Entry } from "../lib/content"
+import { entryPath, entryTitle } from "../lib/content"
+import { articleMarkup, articleScope } from "../lib/markup"
+import Reader from "./Reader"
+import { enhanceSidenotes } from "../lib/sidenotes-reader"
+import { startCodeFolds } from "../lib/code-block"
+import { startImageLoading } from "../lib/image-reader"
+
+interface Props {
+  entry: Entry
+  headings: MarkdownHeading[]
+  embedded?: boolean
+}
+
+const { entry, headings, embedded = false } = Astro.props
+const scope = articleScope(entry)
+const toc = entry.data.toc && !embedded ? headings.filter(({ depth, slug }) => depth >= 2 && depth <= 4 && slug !== "footnote-label" && !slug.startsWith("sidenote-")) : []
+const canonical = new URL(entryPath(entry), Astro.site)
+const article = articleMarkup((await Astro.slots.render("default")) ?? "", canonical, embedded ? scope : undefined, import.meta.env.BASE_URL)
+const title = entryTitle(entry)
+const links = toc.map(({ depth, slug, text }) => ({ depth, href: "#" + encodeURIComponent(slug), text }))
+---
+
+{toc.length > 0 && (
+  <nav class="toc-desktop" aria-label="文章目录">
+    <h2 class="toc-heading">文章目录</h2>
+    <ol class="toc-links" data-toc-scroll>
+      {links.map(({ depth, href, text }) => (
+        <li data-depth={depth}>
+          <a href={href} data-astro-reload>
+            {text}
+          </a>
+        </li>
+      ))}
+      <li class="toc-indicator" aria-hidden="true"></li>
+    </ol>
+  </nav>
+)}
+{toc.length > 0 && (
+  <div class="toc-mobile" data-enhancement data-toc-for={scope}>
+    <button type="button" class="icon-button toc-open" aria-label="打开目录" data-tooltip="打开目录">
+      <List aria-hidden="true" />
+    </button>
+    <dialog class="toc-dialog" aria-labelledby={scope + "-toc-title"}>
+      <div class="toc-dialog-header">
+        <div>
+          <h2 id={scope + "-toc-title"} class="toc-heading">
+            文章目录
+          </h2>
+          <p class="toc-article-title">{title}</p>
+        </div>
+        <button type="button" class="icon-button" aria-label="关闭目录" data-tooltip="关闭目录">
+          <X aria-hidden="true" />
+        </button>
+      </div>
+      <nav aria-label="文章目录" data-toc-scroll>
+        <ol class="toc-links">
+          {links.map(({ depth, href, text }) => (
+            <li data-depth={depth}>
+              <a href={href} data-astro-reload>
+                {text}
+              </a>
+            </li>
+          ))}
+        </ol>
+      </nav>
+    </dialog>
+  </div>
+)}
+{(toc.length > 0 || article.hasReader) && <Reader scope={scope} client:load />}
+<div id={scope} class="reading" data-has-sidenotes={article.hasSidenotes ? "" : undefined} data-has-images={article.hasImages ? "" : undefined}>
+  <Fragment set:html={article.html} />
+  {article.hasImages && (
+    <template data-image-retry>
+      <button class="loading-failed" type="button" hidden>
+        <ImageOff aria-hidden="true" focusable="false" />
+        点击重试
+      </button>
+    </template>
+  )}
+</div>
+{article.hasSidenotes && (
+  <script
+    is:inline
+    set:html={`(() => {
+    const installed = Symbol.for("yinyang.sidenotes");
+    if (Reflect.get(document, installed)) return;
+    Reflect.set(document, installed, true);
+    const enhance = ${enhanceSidenotes.toString()};
+    document.addEventListener("yinyang:reading", event => { if (event.target.hasAttribute("data-has-sidenotes")) enhance(event.target) });
+    document.addEventListener("astro:after-swap", () => document.querySelectorAll("[data-has-sidenotes]").forEach(enhance));
+  })()`}
+  ></script>
+)}
+{article.hasCode && <script is:inline set:html={"(" + startCodeFolds.toString() + ")()"}></script>}
+{article.hasImages && <script is:inline set:html={"(" + startImageLoading.toString() + ")()"}></script>}
+{(article.hasSidenotes || article.hasCode || article.hasImages) && <script is:inline data-astro-rerun define:vars={{ scope }}>
+  document.getElementById(scope)?.dispatchEvent(new Event("yinyang:reading", { bubbles: true }))
+</script>}

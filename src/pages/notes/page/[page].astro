@@ -1,0 +1,12 @@
+---
+import NoteListing from "../../../components/NoteListing.astro"
+import { published } from "../../../lib/content"
+import { site } from "../../../site.config"
+import type { GetStaticPaths } from "astro"
+
+export const getStaticPaths = (async ({ paginate }) => paginate(await published("notes"), { pageSize: site.postsPerPage })) satisfies GetStaticPaths
+
+const { page } = Astro.props
+---
+
+<NoteListing title="Notes" entries={page.data} current={page.currentPage} total={page.lastPage} />

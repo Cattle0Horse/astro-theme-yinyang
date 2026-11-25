@@ -1,0 +1,81 @@
+---
+import Appearance from "./Appearance"
+import { site } from "../site.config"
+import { basePath } from "../lib/content-format"
+import { ChevronDown, House, NotebookPen, Rss, Tags } from "lucide-react"
+import type { Appearance as Preference } from "../lib/appearance"
+
+interface Props {
+  initial: Preference
+}
+
+const { initial } = Astro.props
+const links = [
+  { href: basePath(""), label: "Blog", icon: House },
+  { href: basePath("notes/"), label: "Notes", icon: NotebookPen },
+  { href: basePath("tags/"), label: "标签", icon: Tags },
+  { href: basePath("index.xml"), label: "RSS", icon: Rss }
+].map((link) => ({
+  ...link,
+  current:
+    Astro.url.pathname === link.href
+      ? ("page" as const)
+      : link.href !== basePath("") && link.href.endsWith("/") && Astro.url.pathname.startsWith(link.href)
+        ? ("location" as const)
+        : undefined
+}))
+const currentLabel = links.find(({ current }) => current)?.label ?? "导航"
+---
+
+<header class="site-header shell">
+  <a class="site-name" href={basePath("")}>
+    {site.title}
+  </a>
+  <p class="site-description">{site.description}</p>
+  <div class="header-row flex items-center">
+    <Appearance initial={initial} palettes={site.palettes} client:load />
+    <nav aria-label="主导航" class="header-desktop flex flex-wrap justify-end">
+      {links.map(({ href, label, icon: Icon, current }) => (
+        <a href={href} class="header-link" aria-current={current}>
+          <Icon aria-hidden="true" />
+          {label}
+        </a>
+      ))}
+    </nav>
+    <details class="header-menu">
+      <summary class="header-menu-toggle" aria-label="主导航">
+        <span>{currentLabel}</span>
+        <ChevronDown aria-hidden="true" />
+      </summary>
+      <nav aria-label="主导航">
+        {links.map(({ href, label, icon: Icon, current }) => (
+          <a href={href} class="header-link" aria-current={current}>
+            <Icon aria-hidden="true" />
+            {label}
+          </a>
+        ))}
+      </nav>
+    </details>
+  </div>
+</header>
+
+<script>
+  function closeMenu(menu: HTMLDetailsElement, returnFocus: boolean) {
+    menu.open = false
+    if (returnFocus) menu.querySelector("summary")?.focus({ preventScroll: true })
+  }
+
+  document.addEventListener("click", (event) => {
+    const menu = document.querySelector<HTMLDetailsElement>(".header-menu[open]")
+    if (!menu || !(event.target instanceof Element)) return
+    if (!menu.contains(event.target) || event.target.closest("a[href]")) closeMenu(menu, false)
+  })
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape" || !(event.target instanceof Element)) return
+    const menu = event.target.closest<HTMLDetailsElement>(".header-menu[open]")
+    if (!menu) return
+    event.preventDefault()
+    closeMenu(menu, true)
+  })
+</script>

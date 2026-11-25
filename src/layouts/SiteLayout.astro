@@ -1,0 +1,150 @@
+---
+import { ClientRouter } from "astro:transitions"
+import SiteHeader from "../components/SiteHeader.astro"
+import Tooltip from "../components/Tooltip"
+import { site } from "../site.config"
+import { basePath } from "../lib/content-format"
+import { startAppearance } from "../lib/appearance"
+import type { Appearance } from "../lib/appearance"
+import canvas from "../styles/canvas.css?raw"
+import "../styles/site.css"
+
+interface Props {
+  title?: string
+  description?: string
+  image?: string
+  article?: boolean
+  notFound?: boolean
+}
+
+const { title = site.title, description = site.description, image, article = false, notFound = false } = Astro.props
+const canonical = new URL(Astro.url.pathname, Astro.site)
+const fullTitle = title === site.title ? title : title + " · " + site.title
+const initial = { mode: "system", palette: site.defaultPalette, size: 15 } satisfies Appearance
+const init = "(" + startAppearance.toString() + ")(" + JSON.stringify(site.palettes.map(({ id }) => id)) + "," + JSON.stringify(initial) + ")"
+const proseFont = "https://cdn.jsdelivr.net/npm/lxgw-wenkai-gb-web@1.530.0/lxgwwenkaigb-regular/result.css"
+const jsonLd = JSON.stringify({
+  "@context": "https://schema.org",
+  "@type": article ? "BlogPosting" : "WebPage",
+  headline: title,
+  description,
+  url: canonical.href,
+  ...(image ? { image } : {}),
+  author: { "@type": "Person", name: site.author }
+}).replaceAll("<", "\\u003c")
+const contentMotion = {
+  old: { name: "reading-page-out", duration: "140ms", easing: "ease-in", fillMode: "both" },
+  new: { name: "reading-page-ready", duration: "1ms" }
+}
+---
+
+<!doctype html>
+<html lang={site.language} data-palette={initial.palette} data-font-size={initial.size} transition:animate="none">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <style is:inline set:html={canvas}></style>
+    <script is:inline set:html={init}></script>
+    <title>{fullTitle}</title>
+    <meta name="description" content={description} />
+    <link rel="icon" type="image/png" href={basePath("logo.png")} />
+    <link rel="stylesheet" href={proseFont} media="print" onload="this.removeAttribute('media')" />
+    {notFound ? <meta name="robots" content="noindex" /> : <link rel="canonical" href={canonical.href} />}
+    <meta property="og:title" content={fullTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content={article ? "article" : "website"} />
+    <meta property="og:url" content={canonical.href} />
+    {image && <meta property="og:image" content={image} />}
+    <link rel="alternate" type="application/rss+xml" title="Blog" href={basePath("index.xml")} />
+    <link rel="alternate" type="application/rss+xml" title="Notes" href={basePath("notes/index.xml")} />
+    <link rel="sitemap" type="application/xml" href={basePath("sitemap.xml")} />
+    <script is:inline type="application/ld+json" set:html={jsonLd}></script>
+    <ClientRouter />
+    <noscript>
+      <link rel="stylesheet" href={proseFont} />
+      <style>
+        [data-enhancement] {
+          display: none !important;
+        }
+      </style>
+    </noscript>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">
+      跳到内容
+    </a>
+    <SiteHeader initial={initial} />
+    <Tooltip client:load />
+    <div class="navigation-loading" role="status" aria-live="polite" transition:persist="navigation-loading">
+      <span class="navigation-progress" aria-hidden="true"></span>
+      <span class="navigation-loading-label">正在加载…</span>
+    </div>
+    <main id="main" transition:name="reading-content" transition:animate={{ forwards: contentMotion, backwards: contentMotion }}>
+      <slot />
+    </main>
+  </body>
+</html>
+
+<script>
+  import "../lib/entry-transition"
+  import "../lib/footnote-feedback"
+
+  const root = document.documentElement
+  const timers = new Map<HTMLElement, number>()
+  let nearEdge: HTMLElement | null = null
+
+  function showScrollbar(element: HTMLElement) {
+    element.setAttribute("data-scrollbar-visible", "")
+    window.clearTimeout(timers.get(element))
+    timers.delete(element)
+    if (nearEdge !== element) {
+      timers.set(
+        element,
+        window.setTimeout(() => {
+          element.removeAttribute("data-scrollbar-visible")
+          timers.delete(element)
+        }, 600)
+      )
+    }
+  }
+
+  document.addEventListener(
+    "scroll",
+    (event) => {
+      const target = event.target
+      if (target === document) showScrollbar(root)
+      else if (target instanceof HTMLElement && target.hasAttribute("data-toc-scroll")) showScrollbar(target)
+    },
+    { capture: true, passive: true }
+  )
+  document.addEventListener(
+    "pointermove",
+    (event) => {
+      if (event.pointerType === "touch") return
+      const toc = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-toc-scroll]") : null
+      const edge = toc?.getBoundingClientRect().right ?? window.innerWidth
+      const next = edge - event.clientX < 24 ? (toc ?? root) : null
+      if (next === nearEdge) return
+      const previous = nearEdge
+      nearEdge = next
+      if (previous) showScrollbar(previous)
+      if (next) showScrollbar(next)
+    },
+    { passive: true }
+  )
+  document.addEventListener("pointerleave", () => {
+    const previous = nearEdge
+    nearEdge = null
+    if (previous) showScrollbar(previous)
+  })
+  document.addEventListener("astro:before-swap", () => {
+    nearEdge?.removeAttribute("data-scrollbar-visible")
+    nearEdge = null
+    for (const [element, timer] of timers) {
+      element.removeAttribute("data-scrollbar-visible")
+      window.clearTimeout(timer)
+    }
+    timers.clear()
+  })
+</script>

@@ -1,0 +1,25 @@
+---
+import SiteLayout from "../layouts/SiteLayout.astro"
+import NotFound from "../components/not-found/NotFound"
+import sceneStyles from "../components/not-found/scene.css?inline"
+import { basePath } from "../lib/content-format"
+import { site } from "../site.config"
+---
+
+<SiteLayout title="页面未找到" notFound>
+  <style is:inline set:html={sceneStyles}></style>
+  <section class="shell not-found">
+    <div class="nf-fallback">
+      <h1>404 · 页面未找到</h1>
+      <div class="article-toolbar">
+        <a class="article-action" href={basePath("")}>
+          返回首页
+        </a>
+        <a class="article-action" href={basePath("notes/")}>
+          查看 Notes
+        </a>
+      </div>
+    </div>
+    <NotFound home={basePath("")} articles={basePath("404-articles.json")} enabled={site.notFound.available} client:load />
+  </section>
+</SiteLayout>

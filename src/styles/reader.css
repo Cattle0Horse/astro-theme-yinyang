@@ -1,0 +1,425 @@
+.reading img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin-inline: auto;
+  border-radius: 6px;
+  outline: 1px solid color-mix(in srgb, var(--ink) 24%, transparent);
+  outline-offset: -1px;
+}
+.loading-image-frame {
+  position: relative;
+  display: block;
+  width: fit-content;
+  max-width: 100%;
+  aspect-ratio: var(--image-ratio, auto);
+  margin: 6px auto 0;
+  overflow: hidden;
+  border-radius: 6px;
+}
+.loading-image-frame:not(.size-unknown) {
+  width: min(100%, var(--image-width));
+}
+.loading-image-frame > a {
+  display: block;
+}
+.loading-image-frame:is(.is-failed, .is-retrying):not(.size-unknown) {
+  min-block-size: calc(22px + 0.35rem + var(--fs-ui) * 1.4 + 0.5rem);
+  min-inline-size: min(100%, 5rem);
+}
+.loading-image-frame img {
+  margin: 0;
+  width: 100%;
+  transition:
+    opacity 200ms ease,
+    transform 200ms ease;
+}
+:root[data-js] .loading-image-frame.is-loading {
+  background: var(--code-bg);
+}
+:root[data-js] .loading-image-frame.size-unknown:is(.is-loading, .is-failed, .is-retrying) {
+  min-height: 7rem;
+  width: 100%;
+}
+:root[data-js] .loading-image-frame.is-loading:not(.size-unknown)::before,
+:root[data-js] .loading-image-frame.is-retrying::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 42%;
+  background: linear-gradient(100deg, transparent, color-mix(in srgb, var(--accent) 14%, var(--paper)), transparent);
+  animation: img-shimmer 2.6s linear infinite;
+}
+:root[data-js] .loading-image-frame.is-loading img {
+  opacity: 0;
+  visibility: hidden;
+}
+.loading-image-frame.is-failed img {
+  visibility: hidden;
+}
+:root[data-js] .loading-image-frame.is-loading::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--rule);
+  border-bottom-color: var(--muted);
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: img-loading-spin 800ms linear infinite;
+  pointer-events: none;
+}
+.loading-failed {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 0.35rem;
+  width: 100%;
+  border: 0;
+  background: color-mix(in srgb, var(--accent) 5%, var(--paper));
+  color: var(--muted);
+  font-size: var(--fs-ui);
+  line-height: 1.4;
+  text-align: center;
+  cursor: pointer;
+}
+.loading-failed[hidden] {
+  display: none;
+}
+.loading-failed svg {
+  width: 22px;
+  height: 22px;
+  opacity: 0.72;
+}
+.loading-failed:focus-visible {
+  outline-offset: -2px;
+}
+@keyframes img-shimmer {
+  from {
+    transform: translateX(-170%);
+  }
+  to {
+    transform: translateX(270%);
+  }
+}
+@keyframes img-loading-spin {
+  to {
+    rotate: 1turn;
+  }
+}
+.reading figcaption {
+  font: var(--fs-meta)/1.5 var(--ui-font);
+  color: var(--muted);
+}
+.reading [data-footnotes] > ol {
+  --footnote-list-indent: 1.5em;
+  padding-inline-start: var(--footnote-list-indent);
+}
+.reading [data-footnotes] {
+  font-size: var(--fs-note);
+}
+.reading [data-footnotes] li {
+  scroll-margin-block-start: 20px;
+}
+.reading :is([data-footnote-highlight], [data-footnote-clause]) {
+  position: relative;
+  isolation: isolate;
+}
+.reading [data-footnote-highlight]::after {
+  content: "" / "";
+  position: absolute;
+  z-index: -1;
+  inset-block: -4px;
+  inset-inline: calc(-8px - var(--footnote-list-indent, 0px)) -8px;
+  border-radius: 0 4px 4px 0;
+  background: color-mix(in srgb, var(--accent) 8%, var(--paper));
+  box-shadow: inset 3px 0 var(--accent);
+  pointer-events: none;
+  animation: footnote-highlight-fade 3s ease-out forwards;
+}
+.footnote-clause-overlay {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  pointer-events: none;
+}
+.footnote-clause-overlay > span {
+  position: absolute;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--accent) 18%, var(--paper));
+  animation: footnote-highlight-fade 3.5s ease-out forwards;
+}
+@keyframes footnote-highlight-fade {
+  0%,
+  10% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+.reading .table-scroll {
+  overflow-x: auto;
+  max-width: 100%;
+  overscroll-behavior-x: contain;
+}
+.reading .katex-display {
+  overflow-x: auto;
+  max-width: 100%;
+  overflow-y: hidden;
+  padding-block: 0.5em;
+  overscroll-behavior-x: contain;
+}
+.reading table {
+  border-collapse: collapse;
+  min-width: 50%;
+  margin-inline: auto;
+  background: var(--paper);
+  overflow-wrap: break-word;
+}
+.reading tbody > tr:nth-child(even) {
+  background: var(--table-stripe);
+}
+.reading table :is(td, th) {
+  padding: 0.4em 0.8em;
+  border-block-end: 1px solid var(--rule);
+}
+.reading th {
+  background: var(--table-head);
+  text-align: start;
+}
+.reading :is(th, td)[align="left"] {
+  text-align: left;
+}
+.reading :is(th, td)[align="center"] {
+  text-align: center;
+}
+.reading :is(th, td)[align="right"] {
+  text-align: right;
+}
+:root[data-theme="dark"] .astro-code,
+:root[data-theme="dark"] .astro-code span {
+  color: var(--shiki-dark) !important;
+}
+.reading [data-sidenote-refs] {
+  text-decoration: underline dotted var(--muted);
+  text-decoration-skip-ink: none;
+  text-underline-offset: 0.23em;
+}
+.reading[data-enhanced] [data-sidenote-refs] {
+  cursor: pointer;
+}
+.reading [data-sidenote-refs][data-selected] {
+  text-decoration-color: var(--accent);
+}
+.reading [data-sidenote-refs]:focus-visible {
+  outline-offset: 3px;
+}
+.reading [data-sidenote] {
+  font-size: var(--fs-note);
+  margin-block: -0.3rem 0.95rem;
+  padding-inline-start: 0.65rem;
+  border-inline-start: 2px solid var(--rule);
+}
+.reading [data-sidenote] summary {
+  cursor: pointer;
+  color: var(--accent);
+}
+.reading [data-sidenote] p {
+  margin-block: 0.45rem;
+}
+.reading [data-sidenote] h3 {
+  font-size: var(--fs-note);
+  margin-block: 0.4rem;
+}
+.reading [data-sidenote-panel] {
+  font: var(--fs-note)/1.65 var(--prose-font);
+}
+.reading [data-sidenote-panel] > section {
+  padding-inline-start: 10px;
+  border-inline-start: 1px solid var(--rule);
+  color: var(--prose-ink);
+}
+.reading [data-sidenote-panel] > section[data-selected] {
+  border-color: var(--accent);
+}
+.reading [data-sidenote-panel] > section :last-child {
+  margin-bottom: 0;
+}
+.toc-desktop {
+  margin-bottom: 1.5rem;
+  font: var(--fs-ui)/1.8 var(--ui-font);
+}
+.toc-heading {
+  color: var(--secondary-ink);
+  font-size: var(--fs-ui);
+  font-weight: 600;
+}
+.toc-desktop > .toc-heading {
+  min-height: 36px;
+  padding-bottom: 12px;
+}
+.toc-links {
+  --toc-indent: 16px;
+  --toc-link-inset: 8px;
+  list-style: none;
+  padding-inline-start: 10px;
+  position: relative;
+}
+.toc-links [data-depth="3"] {
+  --toc-level: 1;
+}
+.toc-links [data-depth="4"] {
+  --toc-level: 2;
+}
+.toc-links a {
+  color: var(--secondary-ink);
+  display: flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 4px 8px;
+  padding-inline-start: calc(var(--toc-link-inset) + var(--toc-indent) * var(--toc-level, 0));
+  border-radius: 4px;
+  overflow-wrap: anywhere;
+  transition: color 180ms ease;
+}
+.toc-links a:hover,
+.toc-links a[aria-current="location"] {
+  color: var(--accent);
+}
+.toc-links a:focus-visible {
+  outline-offset: -2px;
+}
+.toc-desktop .toc-links > li[data-depth]::before {
+  content: "" / "";
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: -9px;
+  width: 1px;
+  background: var(--rule-light);
+}
+.toc-desktop .toc-links > li[data-depth] {
+  position: relative;
+}
+.toc-desktop .toc-indicator {
+  position: absolute;
+  inset-inline-start: 0;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--accent);
+  pointer-events: none;
+  transform-origin: top;
+  visibility: hidden;
+  transition:
+    top 240ms ease,
+    height 240ms ease;
+}
+.toc-desktop .toc-indicator[data-toc-active] {
+  visibility: visible;
+}
+.toc-desktop .toc-links a[data-toc-visible]:not(:hover) {
+  color: color-mix(in srgb, var(--accent) 55%, var(--muted));
+}
+.toc-open {
+  display: inline-flex;
+  align-items: center;
+  position: fixed;
+  inset-inline-start: calc(100vw - 16px - 44px);
+  inset-block-end: calc(20px + env(safe-area-inset-bottom));
+  z-index: 10;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--rule);
+  border-radius: 50%;
+  background: var(--panel);
+  box-shadow: 0 2px 8px #0002;
+}
+.toc-dialog {
+  inset: auto;
+  inset-inline-start: max(16px, calc(100vw - 360px - 16px));
+  inset-block-end: calc(20px + env(safe-area-inset-bottom));
+  margin: 0;
+  width: min(calc(100vw - 32px), 360px);
+  max-width: none;
+  max-height: min(65dvh, 480px);
+  border-radius: 20px;
+  overflow: hidden;
+  padding: 0;
+}
+.toc-dialog[open] {
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 12px 40px #0003;
+  transform-origin: bottom right;
+  animation: toc-open-in 220ms ease;
+}
+@keyframes toc-open-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+}
+.toc-dialog::backdrop {
+  background: rgb(0 0 0 / 18%);
+}
+:root[data-theme="dark"] .toc-dialog::backdrop {
+  background: rgb(0 0 0 / 30%);
+}
+html[data-toc-open],
+html[data-toc-open] body {
+  overflow: hidden !important;
+}
+.toc-dialog-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-shrink: 0;
+  padding: 12px 10px 12px 20px;
+}
+.toc-dialog-header > div {
+  min-width: 0;
+  padding-top: 10px;
+}
+.toc-dialog-header .icon-button {
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+}
+.toc-article-title {
+  margin-top: 8px;
+  font-size: calc(var(--fs-meta) - 0.0625rem);
+  line-height: 1.7;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.toc-dialog nav {
+  min-height: 0;
+  overflow: auto;
+  padding: 0 12px 14px;
+}
+.toc-dialog .toc-links {
+  --toc-indent: 18px;
+  --toc-link-inset: 12px;
+  padding: 0;
+}
+.toc-dialog .toc-links a {
+  min-height: 44px;
+  padding-block: 9px;
+  padding-inline-end: 12px;
+  border-radius: 9px;
+  font: var(--fs-note)/1.8 var(--ui-font);
+}
+.toc-dialog .toc-links a[aria-current="location"] {
+  background: color-mix(in srgb, var(--accent) 9%, var(--paper));
+}
+.toc-dialog .toc-links :is([data-depth="3"], [data-depth="4"]) > a {
+  font-size: var(--fs-meta);
+}
+:root[data-js] .article .toc-desktop {
+  display: none;
+}

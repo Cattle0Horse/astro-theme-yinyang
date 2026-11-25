@@ -1,0 +1,17 @@
+---
+import { render } from "astro:content"
+import type { Entry } from "../lib/content"
+import ArticleBody from "./ArticleBody.astro"
+
+interface Props {
+  entry: Entry
+  embedded?: boolean
+}
+
+const { entry, embedded } = Astro.props
+const { Content, headings } = await render(entry)
+---
+
+<ArticleBody entry={entry} headings={headings} embedded={embedded}>
+  <Content />
+</ArticleBody>

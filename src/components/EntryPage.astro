@@ -1,0 +1,64 @@
+---
+import SiteLayout from "../layouts/SiteLayout.astro"
+import EntryMeta from "./EntryMeta.astro"
+import EntryContent from "./EntryContent.astro"
+import CopyText from "./CopyText"
+import { entryPath, entryTitle } from "../lib/content"
+import { articleEditUrl } from "../lib/edit-page"
+import type { Entry } from "../lib/content"
+import { site } from "../site.config"
+import { FileCode, Pencil, Sparkles } from "lucide-react"
+import NoteSources from "./NoteSources.astro"
+
+interface Props {
+  entry: Entry
+}
+
+const { entry } = Astro.props
+const title = entryTitle(entry)
+const href = entryPath(entry)
+const description = entry.data.description || entryTitle(entry)
+const image = entry.data.cover ? new URL(entry.data.cover, new URL(href, Astro.site)).href : undefined
+const ai = entry.data.ai
+const editUrl = articleEditUrl(entry)
+---
+
+<SiteLayout title={title} description={description} image={image} article>
+  <article class="article shell" data-entry-detail={href}>
+    <header class="article-heading">
+      <h1 class="article-title">
+        <span data-entry-part="title">{title}</span>
+      </h1>
+      <div class="article-meta-row">
+        <EntryMeta entry={entry} />
+        <div class="article-toolbar" role="group" aria-label="原文操作">
+          {editUrl && (
+            <a class="icon-button" href={editUrl} data-tooltip="编辑原文" aria-label="编辑原文">
+              <Pencil aria-hidden="true" />
+            </a>
+          )}
+          {site.originalMarkdown && (
+            <a class="icon-button article-source" href={href + "index.md"} data-tooltip="查看原始 Markdown" aria-label="查看原始 Markdown" data-astro-reload>
+              <FileCode aria-hidden="true" />
+            </a>
+          )}
+          {entry.body && <CopyText source={href + "body.md"} client:idle />}
+        </div>
+      </div>
+      {ai && ai !== "none" && (
+        <div class="ai-label">
+          <Sparkles aria-hidden="true" />
+          {ai === "assisted" ? "AI 辅助创作" : "AI 生成 · 经人工编辑"}
+        </div>
+      )}
+      {entry.collection === "notes" && <NoteSources source={entry.data.source} />}
+    </header>
+    <EntryContent entry={entry} />
+    {editUrl && (
+      <div class="article-edit">
+        <hr />
+        <a href={editUrl}>有错误？欢迎提交 Pull Request</a>
+      </div>
+    )}
+  </article>
+</SiteLayout>

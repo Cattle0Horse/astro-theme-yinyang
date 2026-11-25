@@ -1,0 +1,18 @@
+---
+import EntryPage from "../../../../components/EntryPage.astro"
+import { published } from "../../../../lib/content"
+import type { CollectionEntry } from "astro:content"
+
+export async function getStaticPaths() {
+  return (await published("notes")).map((entry) => {
+    const [month, id] = entry.id.split("/")
+    return { params: { month, id }, props: { entry } }
+  })
+}
+
+interface Props {
+  entry: CollectionEntry<"notes">
+}
+---
+
+<EntryPage entry={Astro.props.entry} />

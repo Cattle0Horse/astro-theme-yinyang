@@ -1,0 +1,15 @@
+---
+import EntryPage from "../../../components/EntryPage.astro"
+import { published } from "../../../lib/content"
+import type { CollectionEntry } from "astro:content"
+
+export async function getStaticPaths() {
+  return (await published("posts")).map((entry) => ({ params: { id: entry.id }, props: { entry } }))
+}
+
+interface Props {
+  entry: CollectionEntry<"posts">
+}
+---
+
+<EntryPage entry={Astro.props.entry} />

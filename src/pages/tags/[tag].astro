@@ -1,0 +1,18 @@
+---
+import SiteLayout from "../../layouts/SiteLayout.astro"
+import Timeline from "../../components/Timeline.astro"
+import { published, tagsFor } from "../../lib/content"
+
+export async function getStaticPaths() {
+  return tagsFor(await published("posts")).map(({ id, label, entries }) => ({ params: { tag: id }, props: { label, entries } }))
+}
+
+const { label, entries } = Astro.props
+---
+
+<SiteLayout title={label}>
+  <section class="shell">
+    <h1 class="section-title">#{label}</h1>
+    <Timeline entries={entries} />
+  </section>
+</SiteLayout>

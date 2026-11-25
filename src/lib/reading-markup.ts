@@ -1,0 +1,155 @@
+import type { Element } from "hast"
+import { createElement } from "react"
+import { renderToStaticMarkup } from "react-dom/server"
+import { Check, ChevronDown, Copy, ListOrdered, WrapText } from "lucide-react"
+import { fromHtml } from "hast-util-from-html"
+import { visit } from "unist-util-visit"
+
+import { codeFoldThreshold } from "./code-block.ts"
+
+function codeLanguage(pre: Element) {
+  if (typeof pre.properties.dataLanguage === "string") return pre.properties.dataLanguage
+  const code = pre.children.find((node): node is Element => node.type === "element" && node.tagName === "code")
+  const classes = code?.properties.className
+  return Array.isArray(classes)
+    ? classes
+        .find((value) => typeof value === "string" && value.startsWith("language-"))
+        ?.toString()
+        .slice(9)
+    : undefined
+}
+
+function button(label: string, action: string, icon: ReturnType<typeof createElement>, children?: string) {
+  return createElement(
+    "button",
+    {
+      type: "button",
+      className: action === "fold" ? "code-fold-button icon-button" : "icon-button",
+      "aria-label": label,
+      "data-tooltip": label,
+      "data-reading-action": action,
+      "aria-pressed": action === "lines" || action === "wrap" ? false : undefined
+    },
+    icon,
+    children
+  )
+}
+
+function copyControl(label: string) {
+  return createElement(
+    "span",
+    { className: "inline-flex items-center" },
+    button(
+      label,
+      "copy",
+      createElement(
+        "span",
+        { className: "reading-copy-icons", "aria-hidden": true },
+        createElement("span", { "data-copy-idle": "" }, createElement(Copy)),
+        createElement("span", { "data-copy-success": "" }, createElement(Check))
+      )
+    ),
+    createElement("span", { role: "status", className: "sr-only" })
+  )
+}
+
+function renderMarkup(node: ReturnType<typeof createElement>) {
+  return fromHtml(renderToStaticMarkup(node), { fragment: true }).children.filter((child): child is Element => child.type === "element")
+}
+
+export function addCodeControls(block: Element, pre: Element, index: number) {
+  const language = codeLanguage(pre)
+  let code = ""
+  visit(pre, "text", ({ value }) => {
+    code += value
+  })
+  const lines = code.trimEnd().split("\n").length
+  const toolbar = createElement(
+    "div",
+    { className: language ? "code-actions code-toolbar" : "code-actions", "data-code-actions": "" },
+    language && createElement("span", { className: "code-language" }, language),
+    createElement(
+      "div",
+      { "data-code-controls": "" },
+      button("显示行号", "lines", createElement(ListOrdered, { "aria-hidden": true })),
+      button("开启自动换行", "wrap", createElement(WrapText, { "aria-hidden": true })),
+      copyControl("复制代码")
+    )
+  )
+  block.children.unshift(...renderMarkup(toolbar))
+  if (lines <= codeFoldThreshold) return false
+  pre.properties.dataCollapsed = ""
+  pre.properties.dataCodeIndex = index
+  block.children.push({
+    type: "element",
+    tagName: "div",
+    properties: { className: ["code-fold"], dataCodeFold: "" },
+    children: renderMarkup(
+      createElement(
+        "button",
+        {
+          type: "button",
+          className: "code-fold-button icon-button",
+          "data-code-lines": lines,
+          "aria-expanded": false,
+          "aria-label": "展开代码"
+        },
+        createElement(ChevronDown, { "aria-hidden": true }),
+        createElement("span", null, "展开全部 (" + lines + " 行)")
+      )
+    )
+  })
+  return true
+}
+
+export function addTableControls(table: Element) {
+  if (table.properties.dataTableControls !== undefined) return
+  if (typeof table.properties.dataTableMarkdown !== "string") {
+    const rows: Element[] = []
+    visit(table, "element", (node) => {
+      if (node !== table && node.tagName === "table") return "skip"
+      if (node.tagName === "tr") rows.push(node)
+    })
+    const width = Math.max(0, ...rows.map((row) => row.children.filter((cell) => cell.type === "element").length))
+    if (!width) return false
+    const cells = (row: Element) => row.children.filter((cell): cell is Element => cell.type === "element" && (cell.tagName === "td" || cell.tagName === "th"))
+    const format = (values: string[]) => "| " + values.join(" | ") + " |"
+    const data = rows.map((row) => {
+      const values = cells(row)
+      return format(
+        Array.from({ length: width }, (_, index) => {
+          let value = ""
+          if (values[index])
+            visit(values[index], "text", (text) => {
+              value += text.value
+            })
+          return value
+            .replaceAll("|", "\\|")
+            .replace(/\s*\r?\n\s*/gu, " ")
+            .trim()
+        })
+      )
+    })
+    const heading = cells(rows[0])
+    data.splice(
+      1,
+      0,
+      format(
+        Array.from({ length: width }, (_, index) => {
+          const properties = heading[index]?.properties
+          const alignment = typeof properties?.style === "string" ? /(?:^|;)\s*text-align:\s*(left|center|right)\b/u.exec(properties.style)?.[1] : undefined
+          const value = alignment ?? properties?.align
+          return value === "center" ? ":---:" : value === "right" ? "---:" : value === "left" ? ":---" : "---"
+        })
+      )
+    )
+    table.properties.dataTableMarkdown = data.join("\n")
+  }
+  let caption = table.children.find((child): child is Element => child.type === "element" && child.tagName === "caption")
+  if (!caption) {
+    caption = { type: "element", tagName: "caption", properties: {}, children: [] }
+    table.children.unshift(caption)
+  }
+  caption.children.unshift(...renderMarkup(createElement("div", { className: "table-actions", "data-enhancement": "" }, copyControl("复制 Markdown 表格"))))
+  table.properties.dataTableControls = ""
+}

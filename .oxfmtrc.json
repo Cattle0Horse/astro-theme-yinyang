@@ -1,0 +1,10 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "printWidth": 188,
+  "endOfLine": "lf",
+  "semi": false,
+  "trailingComma": "none",
+  "sortPackageJson": false,
+  "tabWidth": 2,
+  "ignorePatterns": [".astro/**", "dist/**", "pnpm-lock.yaml", "**/*.md"]
+}

@@ -1,0 +1,15 @@
+---
+import NoteListing from "../../../../components/NoteListing.astro"
+import { published, tagsFor } from "../../../../lib/content"
+import { site } from "../../../../site.config"
+import { basePath } from "../../../../lib/content-format"
+
+export async function getStaticPaths() {
+  return tagsFor(await published("notes")).map(({ id, label, entries }) => ({ params: { tag: id }, props: { label, entries } }))
+}
+
+const { label, entries } = Astro.props
+const root = basePath("notes/tags/" + Astro.params.tag + "/")
+---
+
+<NoteListing title={"#" + label} entries={entries.slice(0, site.postsPerPage)} root={root} total={Math.ceil(entries.length / site.postsPerPage)} />

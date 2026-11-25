@@ -1,0 +1,6 @@
+---
+import TagIndex from "../../components/TagIndex.astro"
+import { published, tagsFor } from "../../lib/content"
+---
+
+<TagIndex section="posts" tags={tagsFor(await published("posts"))} />
