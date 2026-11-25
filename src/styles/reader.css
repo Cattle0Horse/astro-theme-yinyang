@@ -195,7 +195,8 @@
   overscroll-behavior-x: contain;
 }
 :root[data-js] .reading [data-math-block] {
-  min-block-size: calc(0.5em + 2rem);
+  /* The copy button's hover shadow extends below its 2rem box. */
+  min-block-size: calc(0.5em + 3rem);
 }
 .reading .katex-html {
   user-select: all;

@@ -466,6 +466,26 @@ test("display math reveals a ghost copy button and copies its TeX source", async
   await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(source)
 })
 
+test("short display math leaves room for the copy button focus ring", async ({ page }) => {
+  await page.goto("/posts/math-demo/")
+  const formula = page.locator(".katex-display").filter({ has: page.locator("annotation").filter({ hasText: /CO2 \+ H2O/u }) })
+  const copy = formula.getByRole("button", { name: "复制公式" })
+  for (const width of [1440, 320]) {
+    await page.setViewportSize({ width, height: 800 })
+    await page.keyboard.press("Tab")
+    await copy.focus()
+    await expect(formula.locator(".math-actions")).toHaveCSS("opacity", "1")
+    const clearance = await copy.evaluate((button) => {
+      const bounds = button.getBoundingClientRect()
+      const display = button.closest(".katex-display")!.getBoundingClientRect()
+      const style = getComputedStyle(button)
+      return { below: display.bottom - bounds.bottom, outline: parseFloat(style.outlineWidth) + parseFloat(style.outlineOffset) }
+    })
+    expect(clearance.outline).toBeGreaterThan(0)
+    expect(clearance.below).toBeGreaterThanOrEqual(clearance.outline)
+  }
+})
+
 test("formula copy stays centered after returning by link or browser history", async ({ context, page }) => {
   await context.grantPermissions(["clipboard-read", "clipboard-write"])
   await page.goto("/posts/math-demo/")
