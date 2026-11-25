@@ -17,7 +17,6 @@ const routes = {
   "/": "index.astro",
   "/404": "404.astro",
   "/404-articles.json": "404-articles.json.ts",
-  "/logo.png": "logo.png.ts",
   "/index.xml": "index.xml.ts",
   "/sitemap.xml": "sitemap.xml.ts",
   "/posts/[...id]": "posts/[...id]/index.astro",
@@ -40,8 +39,9 @@ export default function yinyang(options: ThemeOptions = {}): AstroIntegration[] 
       name: "astro-theme-yinyang",
       hooks: {
         "astro:config:setup": ({ injectRoute, updateConfig }) => {
+          if (!options.favicon) injectRoute({ pattern: "/logo.png", entrypoint: new URL("./routes/logo.png.ts", import.meta.url) })
           for (const [pattern, file] of Object.entries(routes)) {
-            if (pattern !== "/logo.png" || !options.favicon) injectRoute({ pattern, entrypoint: new URL("./routes/" + file, import.meta.url) })
+            injectRoute({ pattern, entrypoint: new URL("./routes/" + file, import.meta.url) })
           }
           updateConfig({
             output: "static",

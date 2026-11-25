@@ -5,7 +5,7 @@
 | 位置 | 职责 |
 | --- | --- |
 | `src/routes/`、`src/layouts/` | Astro 路由入口、布局、SEO 与静态输出。路由由 `src/integration.ts` 注册，调用共用内容查询和 URL 逻辑。 |
-| `src/content/`、`src/content.config.ts` | Markdown 源文与集合 schema。Posts 和 Notes 各自定义字段，通过 schema 推导数据类型。 |
+| `src/content/`、`src/collections.ts` | Markdown 源文、集合入口规则与 schema。Posts 和 Notes 各自定义字段，通过 schema 推导数据类型。演示站和模板的 `src/content.config.ts` 加载同一组集合。 |
 | `src/components/` | 用 Astro 输出静态视图。需要浏览器状态的部分用 React 和 TypeScript，按功能划分 island。 |
 | `src/lib/` | 内容、路径、Markdown 转换及浏览器辅助逻辑。文件系统和构建依赖留在构建端。 |
 | `src/styles/` | Tailwind 入口、公共设计变量和 Markdown 等局部样式。规则见 [设计系统](../DESIGN_SYSTEM.md)。 |

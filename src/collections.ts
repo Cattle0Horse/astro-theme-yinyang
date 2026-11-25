@@ -1,7 +1,17 @@
 import { defineCollection } from "astro:content"
 import { glob } from "astro/loaders"
 import { z } from "astro/zod"
-import { contentId, validDate } from "./lib/content-format"
+
+function generateId({ entry }: { entry: string }) {
+  return entry
+    .replaceAll("\\", "/")
+    .replace(/(?:\/index)?\.md$/u, "")
+    .toLowerCase()
+}
+
+function validDate(value: string) {
+  return /^\d{4}-\d{2}-\d{2}(?:T.+(?:Z|[+-]\d{2}:\d{2}))?$/u.test(value) && Number.isFinite(Date.parse(value)) && new Date(value.slice(0, 10)).toISOString().startsWith(value.slice(0, 10))
+}
 
 const date = z
   .union([z.string(), z.date()])
@@ -16,11 +26,11 @@ const common = {
   cover: z.string().optional()
 }
 const posts = defineCollection({
-  loader: glob({ base: "./src/content/posts", pattern: "**/index.md", generateId: ({ entry }) => contentId(entry) }),
+  loader: glob({ base: "./src/content/posts", pattern: "**/index.md", generateId }),
   schema: z.object({ ...common, title: z.string().trim().min(1), tags: z.array(z.string().trim().min(1)).default([]) })
 })
 const notes = defineCollection({
-  loader: glob({ base: "./src/content/notes", pattern: "[0-9][0-9][0-9][0-9]-{01,02,03,04,05,06,07,08,09,10,11,12}/[0-9][0-9][0-9].md", generateId: ({ entry }) => contentId(entry) }),
+  loader: glob({ base: "./src/content/notes", pattern: "[0-9][0-9][0-9][0-9]-{01,02,03,04,05,06,07,08,09,10,11,12}/[0-9][0-9][0-9].md", generateId }),
   schema: z.object({
     ...common,
     title: z.string().trim().optional(),
