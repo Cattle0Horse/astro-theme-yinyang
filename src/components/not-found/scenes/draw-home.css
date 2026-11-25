@@ -23,9 +23,9 @@
   color: var(--muted);
   font-size: 24px;
   line-height: 1;
-  cursor: default;
+  cursor: pointer;
 }
-.nf-draw-home-reset:hover {
+.nf-draw-home-reset:is(:hover, :focus-visible) {
   background: var(--nf-soft);
   color: var(--accent);
 }
@@ -64,6 +64,14 @@
 }
 .nf-ball {
   filter: drop-shadow(0 3px 4px var(--nf-shadow));
+  cursor: pointer;
+}
+.nf-ball:is(:hover, :focus-visible) {
+  stroke: var(--ink);
+  stroke-width: 2;
+}
+.nf-ball:active {
+  fill: var(--ink);
 }
 .nf-complete .nf-house-window {
   fill: var(--accent);
@@ -73,15 +81,18 @@
 .nf-draw-home-house {
   cursor: pointer;
 }
-.nf-draw-home-house:hover .nf-house-window {
+.nf-draw-home-house:is(:hover, :focus-visible) .nf-house-window {
   fill: var(--accent);
 }
 .nf-draw-home-house .nf-house {
   transition: transform 0.25s;
   transform-origin: 527px 282px;
 }
-.nf-draw-home-house:hover .nf-house {
+.nf-draw-home-house:is(:hover, :focus-visible) .nf-house {
   transform: scale(1.08);
+}
+.nf-draw-home-house:active .nf-house {
+  transform: scale(0.96);
 }
 .nf-draw-home-house::selection {
   background: transparent;

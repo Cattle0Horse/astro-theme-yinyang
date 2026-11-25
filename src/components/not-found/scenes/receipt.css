@@ -30,6 +30,10 @@
   letter-spacing: 3px;
   color: var(--accent);
 }
+.nf-receipt-home:is(:hover, :focus-visible) {
+  background: var(--nf-soft);
+  border-color: var(--accent);
+}
 @keyframes nf-ticket-wait {
   0%,
   76%,

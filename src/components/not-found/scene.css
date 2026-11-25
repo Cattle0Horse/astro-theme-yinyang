@@ -95,6 +95,9 @@
 .nf-fallback p {
   color: var(--muted);
 }
+.not-found :where(a[data-nf-home]:not(.nf-draw-home-house), .nf-fallback a, .nf-draw-home-reset):not([aria-disabled="true"]):active {
+  scale: 0.95;
+}
 .not-found :where(a, button, input, [tabindex]):focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 5px;

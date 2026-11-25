@@ -65,6 +65,10 @@
   background: var(--nf-soft);
   border-color: var(--accent);
 }
+.nf-channel-home:is(:hover, :focus-visible) {
+  background: var(--nf-hover);
+  text-decoration: underline;
+}
 @media (max-width: 480px) {
   .nf-tuner-label {
     gap: 10px;

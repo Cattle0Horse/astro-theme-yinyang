@@ -37,7 +37,8 @@
   transition: color 0.3s;
 }
 .nf-constellation-home:is(:hover, :focus-visible) {
-  color: var(--accent);
+  color: var(--ink);
+  text-decoration: underline;
 }
 @keyframes nf-star-twinkle {
   0%,
