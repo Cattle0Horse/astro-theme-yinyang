@@ -204,6 +204,17 @@
   color: var(--muted);
   box-shadow: none;
 }
+/* Restore the icon styles overridden by KaTeX's descendant SVG rules. */
+.reading .math-actions svg {
+  position: static;
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.reading .math-actions svg path {
+  stroke: inherit;
+}
 .reading .math-actions .icon-button:hover,
 .reading .math-actions .icon-button:focus-visible {
   color: var(--accent);
