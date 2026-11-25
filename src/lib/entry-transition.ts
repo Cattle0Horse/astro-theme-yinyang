@@ -1,6 +1,7 @@
 import { navigate, supportsViewTransitions, type TransitionBeforePreparationEvent, type TransitionBeforeSwapEvent } from "astro:transitions/client"
 import { clearHeadingFeedback } from "./heading-feedback"
 import { clearFootnoteFeedback } from "./footnote-feedback"
+import { closeHeaderMenu, openHeaderMenu } from "../components/header-menu"
 
 const partNames = ["title", "time"] as const
 const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)")
@@ -26,11 +27,7 @@ document.addEventListener(
     if (location.hash) history.replaceState(history.state, "", link.href)
     clearHeadingFeedback()
     clearFootnoteFeedback()
-    const menu = link.closest<HTMLDetailsElement>(".header-menu[open]")
-    if (menu) {
-      menu.open = false
-      menu.querySelector("summary")?.focus({ preventScroll: true })
-    }
+    closeHeaderMenu(link.closest<HTMLDetailsElement>(openHeaderMenu), true)
     window.scrollTo({ top: 0, left: 0, behavior: "instant" })
     if (pendingNavigation) {
       // Astro aborts the pending preparation for same-document fragment navigation.

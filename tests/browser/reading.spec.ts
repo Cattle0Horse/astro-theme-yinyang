@@ -184,16 +184,14 @@ test("sidenotes stack on desktop and footnote backlinks reopen the mobile sideno
   await expect(page).toHaveURL(new RegExp("#" + referenceHash + "$", "u"))
 })
 
-test("sidenotes are readable in the sidebar even if the Reader script fails to load", async ({ page }) => {
+test("sidenotes are readable in the sidebar when external scripts fail", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 })
   let blocked = false
-  await page.route(
-    (url) => /\/Reader(?:\.[^/]+)?\.(?:js|tsx)$/iu.test(url.pathname),
-    async (route) => {
-      blocked = true
-      await route.fulfill({ status: 503 })
-    }
-  )
+  await page.route("**/*", async (route) => {
+    if (route.request().resourceType() !== "script") return route.fallback()
+    blocked = true
+    await route.fulfill({ status: 503 })
+  })
   await page.goto("/posts/sidenote-demo/")
   await expect.poll(() => blocked).toBe(true)
   const panel = page.getByRole("complementary", { name: "旁注" })
@@ -201,7 +199,7 @@ test("sidenotes are readable in the sidebar even if the Reader script fails to l
   await expect(page.locator('details[data-sidenote="1"]')).toBeHidden()
 })
 
-test("the saved theme and code toolbar are already visible before React loads on refresh", async ({ page }) => {
+test("the saved theme and code toolbar are usable while external scripts are delayed on refresh", async ({ page }) => {
   const path = "/posts/syntax-highlighting-test/"
   await page.addInitScript(() => localStorage.setItem("yinyang:appearance", JSON.stringify({ mode: "dark", palette: "indigo", size: 15 })))
   await page.goto(path)
@@ -209,11 +207,12 @@ test("the saved theme and code toolbar are already visible before React loads on
   const pending = new Promise<void>((resolve) => {
     release = resolve
   })
-  await page.route(/\/_astro\/(Appearance|Reader)\.[^/]+\.js$/u, async (route) => {
+  await page.route("**/*", async (route) => {
+    if (route.request().resourceType() !== "script") return route.fallback()
     await pending
     await route.continue()
   })
-  await page.reload({ waitUntil: "domcontentloaded" })
+  await page.reload({ waitUntil: "commit" })
   const block = page.locator("[data-code-block]").first()
   const code = block.locator("pre")
   const toolbar = block.locator(".code-toolbar")
@@ -236,9 +235,11 @@ test("the saved theme and code toolbar are already visible before React loads on
   } finally {
     release()
   }
+  await page.waitForLoadState("load")
   await expect(page.getByRole("button", { name: "明暗模式：深色" })).toBeVisible()
   await expect(page.getByRole("button", { name: "调整字号" })).toBeEnabled()
-  await expect(toolbar.getByRole("button", { name: "显示行号" })).toBeVisible()
+  await toolbar.getByRole("button", { name: "显示行号" }).click()
+  await expect(toolbar.getByRole("button", { name: "隐藏行号" })).toHaveAttribute("aria-pressed", "true")
   await expect(page.locator("[data-code-fold]").first().getByRole("button", { name: "折叠代码" })).toHaveCount(1)
   expect((await toolbar.boundingBox())!.height).toBeCloseTo(before, 0)
   expect((await code.boundingBox())!.y - (await toolbar.boundingBox())!.y).toBeCloseTo(codeOffset, 0)
@@ -746,9 +747,9 @@ test("code line numbers reverse in flight and expanding code hides its scrollbar
   await expect(code).toHaveCSS("scrollbar-width", "thin")
 })
 
-test("the missing local image keeps a full-width placeholder without the Reader bundle", async ({ page }) => {
+test("the missing local image keeps a full-width placeholder when external scripts fail", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 820 })
-  await page.route(/\/_astro\/Reader\.[^/]+\.js$/u, (route) => route.abort())
+  await page.route("**/*", (route) => (route.request().resourceType() === "script" ? route.abort() : route.fallback()))
   let release!: () => void
   const pending = new Promise<void>((resolve) => {
     release = resolve

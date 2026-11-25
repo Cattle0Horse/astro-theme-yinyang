@@ -5,6 +5,7 @@ import { ChevronDown, ListOrdered, WrapText } from "lucide-react"
 import { fromHtml } from "hast-util-from-html"
 import { visit } from "unist-util-visit"
 import { CopyFeedback } from "../components/ui/CopyFeedback.ts"
+import { IconButton } from "../components/ui/IconButton.ts"
 
 import { codeFoldThreshold } from "./code-block.ts"
 
@@ -20,27 +21,16 @@ function codeLanguage(pre: Element) {
     : undefined
 }
 
-function button(label: string, action: string, icon: ReturnType<typeof createElement>, children?: string) {
-  return createElement(
-    "button",
-    {
-      type: "button",
-      className: action === "fold" ? "code-fold-button icon-button" : "icon-button",
-      "aria-label": label,
-      "data-tooltip": label,
-      "data-reading-action": action,
-      "aria-pressed": action === "lines" || action === "wrap" ? false : undefined
-    },
-    icon,
-    children
-  )
+function actionButton(label: string, action: "copy" | "lines" | "wrap", icon: ReturnType<typeof createElement>) {
+  const attributes = { "data-reading-action": action, "aria-pressed": action === "copy" ? undefined : false }
+  return createElement(IconButton, { label, ...attributes }, icon)
 }
 
 function copyControl(label: string) {
   return createElement(
     "span",
     { className: "inline-flex items-center" },
-    button(label, "copy", createElement(CopyFeedback)),
+    actionButton(label, "copy", createElement(CopyFeedback)),
     createElement("span", { role: "status", className: "sr-only" })
   )
 }
@@ -88,8 +78,8 @@ export function addCodeControls(block: Element, pre: Element, index: number) {
     createElement(
       "div",
       { "data-code-controls": "" },
-      button("显示行号", "lines", createElement(ListOrdered, { "aria-hidden": true })),
-      button("开启自动换行", "wrap", createElement(WrapText, { "aria-hidden": true })),
+      actionButton("显示行号", "lines", createElement(ListOrdered, { "aria-hidden": true })),
+      actionButton("开启自动换行", "wrap", createElement(WrapText, { "aria-hidden": true })),
       copyControl("复制代码")
     )
   )

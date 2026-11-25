@@ -56,22 +56,19 @@ const currentLabel = links.find(({ current }) => current)?.label ?? "导航"
 </header>
 
 <script>
-  function closeMenu(menu: HTMLDetailsElement, returnFocus: boolean) {
-    menu.open = false
-    if (returnFocus) menu.querySelector("summary")?.focus({ preventScroll: true })
-  }
+  import { closeHeaderMenu, openHeaderMenu } from "./header-menu"
 
   document.addEventListener("click", (event) => {
-    const menu = document.querySelector<HTMLDetailsElement>(".header-menu[open]")
+    const menu = document.querySelector<HTMLDetailsElement>(openHeaderMenu)
     if (!menu || !(event.target instanceof Element)) return
-    if (!menu.contains(event.target) || event.target.closest("a[href]")) closeMenu(menu, false)
+    if (!menu.contains(event.target) || event.target.closest("a[href]")) closeHeaderMenu(menu, false)
   })
 
   document.addEventListener("keydown", (event) => {
     if (event.key !== "Escape" || !(event.target instanceof Element)) return
-    const menu = event.target.closest<HTMLDetailsElement>(".header-menu[open]")
+    const menu = event.target.closest<HTMLDetailsElement>(openHeaderMenu)
     if (!menu) return
     event.preventDefault()
-    closeMenu(menu, true)
+    closeHeaderMenu(menu, true)
   })
 </script>

@@ -1,0 +1,65 @@
+---
+import type { MarkdownHeading } from "astro"
+import { List, X } from "lucide-react"
+import { IconButton } from "./ui/IconButton"
+
+interface Props {
+  scope: string
+  title: string
+  headings: MarkdownHeading[]
+}
+
+const { scope, title, headings } = Astro.props
+const links = headings.map(({ depth, slug, text }) => ({ depth, href: "#" + encodeURIComponent(slug), text }))
+---
+
+{links.length > 0 && (
+  <>
+    <nav class="toc-desktop" aria-label="文章目录">
+      <h2 class="toc-heading">文章目录</h2>
+      <ol class="toc-links" data-toc-scroll>
+        {links.map(({ depth, href, text }) => (
+          <li data-depth={depth}>
+            <a href={href} data-astro-reload>
+              {text}
+            </a>
+          </li>
+        ))}
+        <li class="toc-indicator" aria-hidden="true"></li>
+      </ol>
+    </nav>
+    <div class="toc-mobile" data-enhancement data-toc-for={scope}>
+      <IconButton className="toc-open" label="打开目录">
+        <List aria-hidden="true" />
+      </IconButton>
+      <dialog class="toc-dialog" aria-labelledby={scope + "-toc-title"}>
+        <div class="toc-dialog-header">
+          <div>
+            <h2 id={scope + "-toc-title"} class="toc-heading">
+              文章目录
+            </h2>
+            <p class="toc-article-title">{title}</p>
+          </div>
+          <IconButton label="关闭目录">
+            <X aria-hidden="true" />
+          </IconButton>
+        </div>
+        <nav aria-label="文章目录" data-toc-scroll>
+          <ol class="toc-links">
+            {links.map(({ depth, href, text }) => (
+              <li data-depth={depth}>
+                <a href={href} data-astro-reload>
+                  {text}
+                </a>
+              </li>
+            ))}
+          </ol>
+        </nav>
+      </dialog>
+    </div>
+  </>
+)}
+
+<script>
+  import "./article-toc"
+</script>

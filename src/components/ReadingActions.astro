@@ -1,0 +1,16 @@
+<script>
+  import { mountReadingActions } from "../lib/reading-actions"
+
+  let cleanups: (() => void)[] = []
+
+  function initializeActions() {
+    cleanups = Array.from(document.querySelectorAll<HTMLElement>("[data-reading-actions]"), mountReadingActions)
+  }
+
+  document.addEventListener("astro:before-swap", () => {
+    for (const cleanup of cleanups) cleanup()
+    cleanups = []
+  })
+  document.addEventListener("astro:after-swap", initializeActions)
+  initializeActions()
+</script>
