@@ -45,8 +45,8 @@ export default function yinyang(options: ThemeOptions = {}): AstroIntegration[] 
           }
           updateConfig({
             output: "static",
-            // Development image and attachment endpoints emit URLs without a trailing slash.
-            trailingSlash: command === "dev" ? "ignore" : "always",
+            // Local servers accept asset URLs and let missing paths reach the theme's 404.
+            trailingSlash: command === "dev" || command === "preview" ? "ignore" : "always",
             build: { format: "directory" },
             vite: {
               plugins: [tailwind()],

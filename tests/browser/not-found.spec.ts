@@ -139,9 +139,11 @@ test.describe("without JavaScript", () => {
   test.use({ javaScriptEnabled: false })
 
   test("the static 404 shows its home link without waiting", async ({ page }) => {
-    const response = await page.goto("/a-missing-page/?scene=cat")
-    expect(response?.status()).toBe(404)
-    await expect(page.getByRole("heading", { name: "404 · 页面未找到" })).toBeVisible()
-    await expect(page.getByRole("link", { name: "返回首页" })).toHaveAttribute("href", "/")
+    for (const path of ["/post", "/post/"]) {
+      const response = await page.goto(path + "?scene=cat")
+      expect(response?.status()).toBe(404)
+      await expect(page.getByRole("heading", { name: "404 · 页面未找到" })).toBeVisible()
+      await expect(page.getByRole("link", { name: "返回首页" })).toHaveAttribute("href", "/")
+    }
   })
 })
