@@ -377,9 +377,6 @@
 .toc-links a:focus-visible {
   outline-offset: -2px;
 }
-.toc-links a:active {
-  background: var(--selection-bg);
-}
 .toc-desktop .toc-links > li[data-depth]::before {
   content: "" / "";
   position: absolute;

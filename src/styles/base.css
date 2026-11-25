@@ -267,6 +267,9 @@ a {
 .header-link[aria-current] {
   color: var(--accent);
 }
+.site-name:active {
+  color: var(--ink);
+}
 .header-menu {
   display: none;
   position: relative;
@@ -835,7 +838,7 @@ a.note-source:focus-visible {
 .article-action:hover {
   color: var(--accent);
 }
-:is(.site-name, .header-link, .entry-name, .note-entry-time, .note-source, .tag-link, .article-action, .article-edit a):active {
+:is(.header-link, .entry-name, .note-entry-time, .note-source, .tag-link, .article-action, .article-edit a):active {
   color: var(--ink);
   text-decoration: underline;
   text-decoration-thickness: 2px;
