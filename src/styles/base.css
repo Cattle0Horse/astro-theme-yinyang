@@ -46,6 +46,7 @@
   --indigo: #3559d8;
   --palette-color: var(--indigo);
   --accent: var(--palette-color);
+  --selection-bg: color-mix(in srgb, var(--accent) 25%, var(--paper));
   --ui-font: "OPPO Sans", system-ui, "Microsoft YaHei", sans-serif;
   --prose-font: "LXGW WenKai GB", "STKaiti", "KaiTi", "Songti SC", Georgia, serif;
   --code-font: "Fira Code", Consolas, monospace;
@@ -226,7 +227,7 @@ input {
   outline-offset: 4px;
 }
 ::selection {
-  background: color-mix(in srgb, var(--accent) 25%, var(--paper));
+  background-color: var(--selection-bg);
 }
 [hidden] {
   display: none !important;

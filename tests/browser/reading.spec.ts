@@ -374,6 +374,25 @@ test("chemistry arrows, fraction bars, and root indices render with the KaTeX st
   }
 })
 
+test("selecting a chemical equation highlights the entire formula and clears on deselection", async ({ page }) => {
+  await page.goto("/posts/math-demo/")
+  const formula = page.locator(".katex-display").filter({ has: page.locator("annotation").filter({ hasText: /\\ce\{2H2/u }) })
+  const visual = formula.locator(".katex-html")
+  const glyph = visual.locator(".mord").first()
+  await visual.scrollIntoViewIfNeeded()
+  const { x, y, width, height } = (await visual.boundingBox())!
+  await page.mouse.move(x + 1, y + height / 2)
+  await page.mouse.down()
+  await page.mouse.move(x + width - 1, y + height / 2, { steps: 8 })
+  await page.mouse.up()
+
+  await expect(visual).not.toHaveCSS("background-color", "rgba(0, 0, 0, 0)")
+  expect(await glyph.evaluate((element) => getComputedStyle(element, "::selection").backgroundColor)).toBe("rgba(0, 0, 0, 0)")
+  await expect(visual.locator("svg path").first()).toBeVisible()
+  await page.evaluate(() => document.getSelection()?.removeAllRanges())
+  await expect(visual).toHaveCSS("background-color", "rgba(0, 0, 0, 0)")
+})
+
 test("display math reveals a ghost copy button and copies its TeX source", async ({ context, page }) => {
   await context.grantPermissions(["clipboard-read", "clipboard-write"])
   await page.goto("/posts/math-demo/")
