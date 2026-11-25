@@ -1,6 +1,6 @@
 .site-header {
   padding-top: 3rem;
-  padding-bottom: 0.25rem;
+  padding-bottom: 0.125rem;
   border-bottom: 1px solid var(--rule);
 }
 .site-name {
@@ -112,7 +112,6 @@
   font-size: var(--fs-ui);
 }
 .header-row {
-  min-height: 3rem;
   margin-top: 1.1rem;
   gap: 1rem 0.75rem;
 }
@@ -259,7 +258,7 @@
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
     gap: 8px;
-    padding-block: 10px;
+    padding-block: 10px 6px;
     background: var(--paper);
   }
   .site-name {
@@ -273,7 +272,6 @@
     display: none;
   }
   .header-row {
-    min-height: 0;
     gap: 14px;
     margin: 0;
   }
