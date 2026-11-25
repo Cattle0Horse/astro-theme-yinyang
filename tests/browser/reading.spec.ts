@@ -344,7 +344,12 @@ test("mobile TOC restores focus and sidenotes work with keyboard or pointer", as
 })
 
 test("chemistry arrows, fraction bars, and root indices render with the KaTeX stylesheet", async ({ page }) => {
-  await page.goto("/posts/math-demo/")
+  const hasKatexFont = () => page.evaluate(() => Array.from(document.fonts).some(({ family }) => family === "KaTeX_Main"))
+  await page.goto("/")
+  await expect.poll(hasKatexFont).toBe(false)
+  await page.getByRole("link", { name: "数学公式示例" }).click()
+  await expect(page).toHaveURL(/\/posts\/math-demo\/$/u)
+  await expect.poll(hasKatexFont).toBe(true)
   for (const width of [390, 1440]) {
     await page.setViewportSize({ width, height: 900 })
     const formulas = page.locator(".katex")

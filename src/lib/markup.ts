@@ -18,6 +18,7 @@ export function articleMarkup(html: string, canonical: URL, namespace?: string, 
   let hasReader = false
   let hasSidenotes = false
   let hasCode = false
+  let hasMath = false
   let codeIndex = 0
   const prefix = base.replace(/\/$/u, "")
   const scoped = (id: string) => (namespace && ids.has(id) ? namespace + "-" + id : id)
@@ -75,6 +76,7 @@ export function articleMarkup(html: string, canonical: URL, namespace?: string, 
     }
     if (properties.dataSidenote !== undefined) hasSidenotes = true
     if (properties.dataCodeBlock !== undefined || properties.dataTable !== undefined) hasReader = true
+    if (Array.isArray(properties.className) && properties.className.includes("katex")) hasMath = true
   })
   visit(root, "element", (node, index, parent) => {
     if (node.tagName !== "img" || !parent || index === undefined || (parent.type === "element" && parent.tagName === "picture")) return
@@ -143,7 +145,7 @@ export function articleMarkup(html: string, canonical: URL, namespace?: string, 
     })
   })
   markFootnoteClauses(root)
-  return { html: toHtml(root), hasImages, hasSidenotes, hasCode, hasReader }
+  return { html: toHtml(root), hasImages, hasSidenotes, hasCode, hasMath, hasReader }
 }
 
 function decodeFragment(value: string) {

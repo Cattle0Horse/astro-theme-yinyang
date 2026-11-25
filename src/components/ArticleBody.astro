@@ -21,6 +21,7 @@ const scope = articleScope(entry)
 const toc = entry.data.toc && !embedded ? headings.filter(({ depth, slug }) => depth >= 2 && depth <= 4 && slug !== "footnote-label" && !slug.startsWith("sidenote-")) : []
 const canonical = new URL(entryPath(entry), Astro.site)
 const article = articleMarkup((await Astro.slots.render("default")) ?? "", canonical, embedded ? scope : undefined, import.meta.env.BASE_URL)
+if (article.hasMath) Astro.locals.hasKatex = true
 ---
 
 {toc.length > 0 && <ArticleToc scope={scope} title={entryTitle(entry)} headings={toc} />}
