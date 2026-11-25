@@ -38,14 +38,15 @@ export default function yinyang(options: ThemeOptions = {}): AstroIntegration[] 
     {
       name: "astro-theme-yinyang",
       hooks: {
-        "astro:config:setup": ({ injectRoute, updateConfig }) => {
+        "astro:config:setup": ({ command, injectRoute, updateConfig }) => {
           if (!options.favicon) injectRoute({ pattern: "/logo.png", entrypoint: new URL("./routes/logo.png.ts", import.meta.url) })
           for (const [pattern, file] of Object.entries(routes)) {
             injectRoute({ pattern, entrypoint: new URL("./routes/" + file, import.meta.url) })
           }
           updateConfig({
             output: "static",
-            trailingSlash: "always",
+            // Development image and attachment endpoints emit URLs without a trailing slash.
+            trailingSlash: command === "dev" ? "ignore" : "always",
             build: { format: "directory" },
             vite: {
               plugins: [tailwind()],
