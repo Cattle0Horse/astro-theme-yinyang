@@ -55,6 +55,12 @@ test("renders nested content, original Markdown and the referenced source image"
   assert.equal(attachment.subarray(1, 4).toString(), "PNG")
 })
 
+test("preserves straight quotes and double hyphens in Chinese prose", async () => {
+  const [post, note] = await Promise.all([file("posts/ai-engineering-probabilistic-model-feedback-system/index.html"), file("notes/2026-10/001/index.html")])
+  assert.match(post, /类似"理解"的能力/u)
+  assert.match(note, /原因--LLM/u)
+})
+
 test("only pages with the corresponding reading feature include its bootstrap", async () => {
   const homepage = await file("index.html")
   const fallback = await file("404.html")

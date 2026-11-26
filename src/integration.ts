@@ -56,6 +56,7 @@ export default function yinyang(options: ThemeOptions = {}): AstroIntegration[] 
               syntaxHighlight: { type: "shiki", excludeLangs: ["math", "plaintext"] },
               shikiConfig: { themes: { light: "github-light", dark: "github-dark" } },
               processor: unified({
+                smartypants: false,
                 remarkPlugins: [remarkMath, remarkLegacyMath, remarkSidenotes, remarkTableSource],
                 rehypePlugins: [rehypeKatex, rehypeReading]
               })
