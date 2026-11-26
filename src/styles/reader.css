@@ -368,6 +368,7 @@
 }
 .reading .sidenote-dialog-header h2 {
   margin: 0;
+  color: var(--ink);
   font: var(--ui-weight-strong) var(--fs-ui) / 1.4 var(--ui-font);
 }
 .sidenote-dialog-header button {
@@ -379,6 +380,7 @@
 }
 [data-sidenote-dialog] {
   --sidenote-dialog-width: min(26rem, calc(100vw - 2rem));
+  --sidenote-backdrop: color-mix(in srgb, var(--ink) 18%, transparent);
   position: fixed;
   inset-block: 0;
   inset-inline-start: calc((100vw - var(--sidenote-dialog-width)) / 2);
@@ -389,8 +391,8 @@
   max-height: min(60dvh, 29.5rem);
   padding: 0;
   overflow: hidden;
-  color: var(--ink);
-  background: var(--panel);
+  color: var(--prose-ink);
+  background: var(--paper);
   border: 1px solid var(--rule);
   border-radius: 0.75rem;
   box-shadow: 0 12px 40px #0003;
@@ -398,18 +400,32 @@
 [data-sidenote-dialog][open] {
   display: flex;
   flex-direction: column;
-  animation: sidenote-dialog-in 180ms ease-out;
+  opacity: 1;
+  transition: opacity 180ms ease-out;
 }
-@keyframes sidenote-dialog-in {
-  from {
+[data-sidenote-dialog][open][data-closing] {
+  opacity: 0;
+  transition-timing-function: ease-in;
+  transition-duration: 150ms;
+}
+[data-sidenote-dialog][open]::backdrop {
+  background-color: var(--sidenote-backdrop);
+  transition: background-color 180ms ease-out;
+}
+[data-sidenote-dialog][open][data-closing]::backdrop {
+  background-color: transparent;
+  transition: background-color 150ms ease-in;
+}
+:root[data-theme="dark"] [data-sidenote-dialog] {
+  --sidenote-backdrop: color-mix(in srgb, var(--paper) 40%, transparent);
+}
+@starting-style {
+  [data-sidenote-dialog][open] {
     opacity: 0;
   }
-}
-[data-sidenote-dialog]::backdrop {
-  background: rgb(0 0 0 / 18%);
-}
-:root[data-theme="dark"] [data-sidenote-dialog]::backdrop {
-  background: rgb(0 0 0 / 32%);
+  [data-sidenote-dialog][open]::backdrop {
+    background-color: transparent;
+  }
 }
 html:has([data-sidenote-dialog][open]) {
   overflow: hidden !important;

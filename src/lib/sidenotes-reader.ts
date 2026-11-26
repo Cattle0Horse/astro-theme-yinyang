@@ -68,9 +68,13 @@ export function enhanceSidenotes(article: HTMLElement) {
     )
   }
 
+  let dismissal: Promise<unknown> | undefined
+
   function closeNote(restoreFocus: boolean) {
     if (!displayed) return
+    dismissal = undefined
     dialog.close()
+    dialog.removeAttribute("data-closing")
     displayed.append(...dialogBody.childNodes)
     displayed = undefined
     if (restoreFocus) {
@@ -80,6 +84,21 @@ export function enhanceSidenotes(article: HTMLElement) {
       highlight()
       outline("blocks", [])
     }
+  }
+
+  function dismissNote() {
+    if (!displayed || dismissal) return
+    dialog.setAttribute("data-closing", "")
+    const motion = dialog.getAnimations().filter((animation) => animation instanceof CSSTransition && animation.transitionProperty === "opacity")
+    if (!motion.length) {
+      closeNote(true)
+      return
+    }
+    const finished = Promise.allSettled(motion.map((animation) => animation.finished))
+    dismissal = finished
+    void finished.then(() => {
+      if (dismissal === finished) closeNote(true)
+    })
   }
 
   function openNote(note: HTMLDetailsElement, source: HTMLElement | undefined) {
@@ -314,10 +333,10 @@ export function enhanceSidenotes(article: HTMLElement) {
     highlight()
   }
 
-  dismiss.addEventListener("click", () => closeNote(true))
+  dismiss.addEventListener("click", dismissNote)
   dialog.addEventListener("cancel", (event) => {
     event.preventDefault()
-    closeNote(true)
+    dismissNote()
   })
   let outside = false
   dialog.addEventListener("pointerdown", (event) => {
@@ -328,7 +347,7 @@ export function enhanceSidenotes(article: HTMLElement) {
   })
   dialog.addEventListener("click", (event) => {
     if (outside && event.target === dialog && isOutside(event)) {
-      closeNote(true)
+      dismissNote()
     } else if (event.target instanceof Element && event.button === 0 && !event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey) {
       const link = event.target.closest<HTMLAnchorElement>("a[href]")
       if (link && !link.hasAttribute("download") && (!link.target || link.target === "_self")) {

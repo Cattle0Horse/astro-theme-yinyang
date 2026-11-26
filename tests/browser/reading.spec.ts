@@ -604,6 +604,12 @@ test("long mobile sidenotes scroll inside a centered window without moving the a
   await trigger.click()
   const dialog = page.getByRole("dialog", { name: "旁注 1" })
   await expect(dialog).toBeVisible()
+  expect(
+    await dialog.evaluate(async (element) => {
+      await Promise.allSettled(element.getAnimations().map((animation) => animation.finished))
+      return getComputedStyle(element).backgroundColor === getComputedStyle(document.body).backgroundColor
+    })
+  ).toBe(true)
   await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))))
   await expect(page.locator("canvas[data-annotation-outline]")).toHaveCount(0)
   const bounds = (await dialog.boundingBox())!
@@ -616,7 +622,16 @@ test("long mobile sidenotes scroll inside a centered window without moving the a
   await page.mouse.wheel(0, 500)
   await expect.poll(() => scroll.evaluate((element) => element.scrollTop)).toBeGreaterThan(0)
   expect(await page.evaluate(() => scrollY)).toBe(position)
-  await dialog.getByRole("button", { name: "关闭旁注" }).click()
+  const exit = await dialog.evaluate((element) => {
+    element.querySelector("button")!.click()
+    return {
+      open: element.hasAttribute("open"),
+      closing: element.hasAttribute("data-closing"),
+      content: Boolean(element.querySelector(".sidenote-dialog-body")?.textContent?.trim()),
+      fading: element.getAnimations().some((animation) => animation instanceof CSSTransition && animation.transitionProperty === "opacity")
+    }
+  })
+  expect(exit).toEqual({ open: true, closing: true, content: true, fading: true })
   await expect(dialog).toBeHidden()
   await expect(trigger).toBeFocused()
 })
