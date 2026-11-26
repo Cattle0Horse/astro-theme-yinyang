@@ -88,18 +88,23 @@ function createOutlineLayer(host: HTMLElement, dialog?: HTMLDialogElement | null
   const context = canvas.getContext("2d")
   if (!context) return
   const surface = context
-  const width = document.documentElement.clientWidth
-  const height = document.documentElement.clientHeight
+  canvas.dataset.annotationOutline = ""
+  canvas.setAttribute("aria-hidden", "true")
+  host.append(canvas)
+  const { left, top, width, height } = canvas.getBoundingClientRect()
+  if (!width || !height) {
+    canvas.remove()
+    return
+  }
   const scale = Math.min(devicePixelRatio, 2)
   canvas.width = Math.ceil(width * scale)
   canvas.height = Math.ceil(height * scale)
-  canvas.dataset.annotationOutline = ""
-  canvas.setAttribute("aria-hidden", "true")
+  const scaleX = canvas.width / width
+  const scaleY = canvas.height / height
   surface.lineWidth = 1.5
   surface.lineCap = "round"
   surface.lineJoin = "round"
   surface.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue("--accent").trim()
-  host.append(canvas)
   const controller = new AbortController()
   const paths = new Map<HTMLElement | symbol, PlayingOutline>()
   let frame = requestAnimationFrame(animate)
@@ -115,7 +120,7 @@ function createOutlineLayer(host: HTMLElement, dialog?: HTMLDialogElement | null
   function animate(now: number) {
     surface.resetTransform()
     surface.clearRect(0, 0, canvas.width, canvas.height)
-    surface.setTransform(scale, 0, 0, scale, dialog ? 0 : -scrollX * scale, dialog ? 0 : -scrollY * scale)
+    surface.setTransform(scaleX, 0, 0, scaleY, -(left + (dialog ? 0 : scrollX)) * scaleX, -(top + (dialog ? 0 : scrollY)) * scaleY)
     for (const [key, outline] of paths) {
       const { target, path, length, pace, duration } = outline
       outline.startedAt ??= now

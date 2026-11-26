@@ -6,6 +6,7 @@ async function recordAnnotationOutlines(page: Page) {
   await page.addInitScript(() => {
     const contours = new WeakMap<Path2D, { x: number; y: number }[]>()
     const started = new WeakSet<Path2D>()
+    const closed = new WeakSet<Path2D>()
     const { arcTo } = Path2D.prototype
     const { stroke } = CanvasRenderingContext2D.prototype
     Path2D.prototype.arcTo = function (this: Path2D, x, y, x2, y2, radius) {
@@ -21,11 +22,16 @@ async function recordAnnotationOutlines(page: Page) {
           started.add(path)
           this.canvas.dataset.outlinesStarted = String(Number(this.canvas.dataset.outlinesStarted ?? 0) + 1)
         }
-        if (!this.getLineDash().length) {
+        if (!closed.has(path) && !this.getLineDash().length) {
+          closed.add(path)
+          const { left, top, width, height } = this.canvas.getBoundingClientRect()
+          const transform = this.getTransform()
+          const rendered = points.map(({ x, y }) => ({
+            x: left + scrollX + ((x * transform.a + transform.e) * width) / this.canvas.width,
+            y: top + scrollY + ((y * transform.d + transform.f) * height) / this.canvas.height
+          }))
           const outlines = JSON.parse(this.canvas.dataset.closedOutlines ?? "[]") as { x: number; y: number }[][]
-          if (!outlines.some((outline) => JSON.stringify(outline) === JSON.stringify(points))) {
-            this.canvas.dataset.closedOutlines = JSON.stringify([...outlines, points])
-          }
+          this.canvas.dataset.closedOutlines = JSON.stringify([...outlines, rendered])
         }
       }
       Reflect.apply(stroke, this, path ? [path] : [])
@@ -980,7 +986,8 @@ test("sidenote outlines only mark the destination in both directions", async ({ 
   )
   for (const rail of rails) {
     expect(rail.color).not.toBe("rgba(0, 0, 0, 0)")
-    expect(cards.some((points) => points.some(({ x, y }) => x === rail.x && y === rail.top) && points.some(({ x, y }) => x === rail.x && y === rail.bottom))).toBe(true)
+    const cornerAligned = (x: number, y: number, edge: number) => Math.abs(x - rail.x) < 0.25 && Math.abs(y - edge) < 0.25
+    expect(cards.some((points) => points.some(({ x, y }) => cornerAligned(x, y, rail.top)) && points.some(({ x, y }) => cornerAligned(x, y, rail.bottom)))).toBe(true)
   }
   await expect(page.locator("canvas[data-annotation-outline]")).toHaveCount(0)
   await expect(card).not.toHaveCSS("border-inline-start-color", "rgba(0, 0, 0, 0)")
