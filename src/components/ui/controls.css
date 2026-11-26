@@ -64,9 +64,6 @@
   transition-delay: 0s;
 }
 .copy-error {
-  display: block;
-}
-.copy-error {
   color: var(--ink);
 }
 :where(.math-actions) .copy-feedback > svg {
