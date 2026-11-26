@@ -1,8 +1,11 @@
+import { annotationTextRects } from "./annotation-contour"
+import { clearAnnotationFeedback, playAnnotationOutline } from "./annotation-outline"
 import { scrollToReadingTarget } from "./reading-scroll"
 
 const links = "a[data-footnote-ref], a[data-footnote-backref]"
 let current: HTMLElement | undefined
 let clear: (() => void) | undefined
+let frame = 0
 
 function targetFor(hash: string) {
   try {
@@ -13,77 +16,56 @@ function targetFor(hash: string) {
   }
 }
 
-function highlightClause(reference: HTMLElement) {
+function textRange(target: HTMLElement) {
+  const range = document.createRange()
+  if (!target.hasAttribute("data-footnote-ref")) {
+    range.selectNodeContents(target)
+    return range
+  }
+  const reference = target
   const marker = reference.closest("sup") ?? reference
-  const block = marker.parentElement?.closest<HTMLElement>("p, li, div, h1, h2, h3, h4, h5, h6, blockquote, pre, td, th, section")
-  if (!block) return
   const start = reference.dataset.footnoteClauseStart
   const anchor = start ? document.getElementById(start) : null
-  const range = document.createRange()
-  range.selectNodeContents(marker)
-  if (anchor && block.contains(anchor)) {
-    range.setStartAfter(anchor)
-    range.setEndBefore(marker)
-  }
-  const origin = block.getBoundingClientRect()
-  const overlay = document.createElement("span")
-  overlay.className = "footnote-clause-overlay"
-  overlay.setAttribute("aria-hidden", "true")
-  for (const rect of range.getClientRects()) {
-    if (!rect.width || !rect.height) continue
-    const bar = document.createElement("span")
-    bar.style.left = rect.left - origin.left - block.clientLeft - 2 + "px"
-    bar.style.top = rect.top - origin.top - block.clientTop - 2 + "px"
-    bar.style.width = rect.width + 4 + "px"
-    bar.style.height = rect.height + 4 + "px"
-    overlay.append(bar)
-  }
-  if (!overlay.childElementCount) return
-  block.setAttribute("data-footnote-clause", "")
-  block.append(overlay)
-  return () => {
-    overlay.remove()
-    block.removeAttribute("data-footnote-clause")
-  }
+  if (!anchor) return
+  range.setStartAfter(anchor)
+  range.setEndBefore(marker)
+  if (/[\p{L}\p{N}\p{S}]/u.test(range.toString())) return range
 }
 
 export function clearFootnoteFeedback() {
+  cancelAnimationFrame(frame)
   clear?.()
   clear = undefined
   current = undefined
 }
 
-function highlight(target: HTMLElement) {
+function prepareTarget(target: HTMLElement) {
+  clearAnnotationFeedback()
   clearFootnoteFeedback()
   current = target
-  const reference = target.hasAttribute("data-footnote-ref")
-  let remove: (() => void) | undefined
-  if (reference) {
+  if (target.hasAttribute("data-footnote-ref")) {
     const sidenote = target.closest<HTMLDetailsElement>("details[data-sidenote]")
     if (sidenote) {
       sidenote.dispatchEvent(new Event("sidenote:reveal", { bubbles: true }))
       sidenote.hidden = false
       sidenote.open = true
     }
-    remove = highlightClause(target)
-  } else {
-    // Replay the CSS animation on repeated clicks to the same footnote.
-    void target.offsetWidth
-    target.setAttribute("data-footnote-highlight", "")
-    remove = () => target.removeAttribute("data-footnote-highlight")
   }
-  const timeout = window.setTimeout(clearFootnoteFeedback, reference ? 3500 : 3000)
-  clear = () => {
-    window.clearTimeout(timeout)
-    remove?.()
-  }
+}
+
+function highlight(target: HTMLElement) {
+  if (current !== target || !target.isConnected) return
+  const range = textRange(target)
+  if (range) clear = playAnnotationOutline([annotationTextRects(range)])
 }
 
 function highlightCurrentFragment() {
   const target = targetFor(location.hash)
   if (target === current) return
-  if (target) highlight(target)
-  else clearFootnoteFeedback()
+  if (target) {
+    prepareTarget(target)
+    frame = requestAnimationFrame(() => highlight(target))
+  } else clearFootnoteFeedback()
 }
 
 document.addEventListener(
@@ -94,8 +76,8 @@ document.addEventListener(
     if (!link || !link.getAttribute("href")?.startsWith("#") || link.hasAttribute("download") || (link.target && link.target.toLowerCase() !== "_self")) return
     const target = targetFor(link.hash)
     if (!target) return
-    highlight(target)
-    scrollToReadingTarget(event, link, target, "center")
+    prepareTarget(target)
+    scrollToReadingTarget(event, link, target, "center", () => highlight(target))
   },
   { capture: true }
 )

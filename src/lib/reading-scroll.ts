@@ -1,7 +1,11 @@
 let cancelScroll: (() => void) | undefined
 
-export function scrollToReadingTarget(event: MouseEvent, link: HTMLAnchorElement, target: HTMLElement, align: "start" | "center") {
+export function scrollToReadingTarget(event: MouseEvent, link: HTMLAnchorElement, target: HTMLElement, align: "start" | "center", arrived?: () => void) {
   event.preventDefault()
+  scrollToReadingPosition(target, align, arrived, link)
+}
+
+export function scrollToReadingPosition(target: HTMLElement, align: "start" | "center", arrived?: () => void, link?: HTMLAnchorElement) {
   cancelScroll?.()
   const controller = new AbortController()
   let frame = requestAnimationFrame(start)
@@ -9,7 +13,7 @@ export function scrollToReadingTarget(event: MouseEvent, link: HTMLAnchorElement
   function stop() {
     cancelAnimationFrame(frame)
     controller.abort()
-    cancelScroll = undefined
+    if (cancelScroll === stop) cancelScroll = undefined
   }
 
   function start(now: number) {
@@ -25,7 +29,7 @@ export function scrollToReadingTarget(event: MouseEvent, link: HTMLAnchorElement
     const offset = align === "center" ? (innerHeight - height) / 2 : padding + headingMargin
     const to = Math.max(0, Math.min(from + top - offset, root.scrollHeight - root.clientHeight))
     const distance = to - from
-    if (link.hash !== location.hash) {
+    if (link && link.hash !== location.hash) {
       const state = { ...history.state, scrollX, scrollY: from }
       history.replaceState(state, "")
       const next = { ...state, index: (state.index ?? 0) + 1 }
@@ -35,6 +39,7 @@ export function scrollToReadingTarget(event: MouseEvent, link: HTMLAnchorElement
     }
     if (Math.abs(distance) < 1) {
       stop()
+      arrived?.()
       return
     }
     const duration = Math.min(680, 260 + Math.sqrt(Math.abs(distance)) * 8)
@@ -44,7 +49,10 @@ export function scrollToReadingTarget(event: MouseEvent, link: HTMLAnchorElement
       const eased = progress * progress * (3 - 2 * progress)
       window.scrollTo({ top: from + distance * eased, behavior: "instant" })
       if (progress < 1) frame = requestAnimationFrame(step)
-      else stop()
+      else {
+        stop()
+        arrived?.()
+      }
     }
 
     frame = requestAnimationFrame(step)
@@ -61,4 +69,5 @@ export function scrollToReadingTarget(event: MouseEvent, link: HTMLAnchorElement
     },
     { signal }
   )
+  return stop
 }

@@ -1,3 +1,5 @@
+import type { SidenoteOutline } from "./annotation-outline"
+
 export function enhanceSidenotes(article: HTMLElement) {
   if (article.hasAttribute("data-enhanced")) return
   const notes = [...article.querySelectorAll<HTMLDetailsElement>("details[data-sidenote]")]
@@ -21,6 +23,10 @@ export function enhanceSidenotes(article: HTMLElement) {
   let room = 0
   const moved: { note: HTMLDetailsElement; body: HTMLElement }[] = []
   const rail = new Map<string, { section: HTMLElement; source: HTMLElement | undefined }>()
+
+  function outline(kind: SidenoteOutline["kind"], targets: HTMLElement[]) {
+    article.dispatchEvent(new CustomEvent<SidenoteOutline>("sidenote:outline", { bubbles: true, detail: { kind, targets } }))
+  }
 
   const restore = () => {
     for (const { note, body } of moved.splice(0)) note.append(...body.childNodes)
@@ -78,6 +84,7 @@ export function enhanceSidenotes(article: HTMLElement) {
       const id = note.dataset.sidenote ?? ""
       if (wide.matches) {
         const section = document.createElement("section")
+        section.dataset.sidenoteCard = id
         const body = document.createElement("div")
         body.append(...Array.from(note.childNodes).filter((node) => !(node instanceof HTMLElement && node.tagName === "SUMMARY")))
         moved.push({ note, body })
@@ -100,11 +107,15 @@ export function enhanceSidenotes(article: HTMLElement) {
   }
 
   const selectNotes = (source: HTMLElement) => {
-    const selected = anchor === source && idsFor(source).every((id) => selection.includes(id))
+    const selected = !wide.matches && anchor === source && idsFor(source).every((id) => selection.includes(id))
     anchor = selected ? undefined : source
     selection = idsFor(anchor)
     if (wide.matches) {
       highlight()
+      outline(
+        "blocks",
+        selection.flatMap((id) => rail.get(id)?.section ?? [])
+      )
       return
     }
     for (const note of notes) {
@@ -113,6 +124,10 @@ export function enhanceSidenotes(article: HTMLElement) {
       note.open = selection.includes(id)
     }
     highlight()
+    outline(
+      "blocks",
+      notes.filter((note) => selection.includes(note.dataset.sidenote ?? ""))
+    )
   }
   const revealNote = (event: Event) => {
     const note = event.target
@@ -129,13 +144,30 @@ export function enhanceSidenotes(article: HTMLElement) {
     control.tabIndex = 0
     control.setAttribute("role", "button")
   })
+  const returnButtons = notes.map((note) => {
+    const button = document.createElement("button")
+    button.type = "button"
+    button.dataset.sidenoteReturn = note.dataset.sidenote ?? ""
+    button.textContent = "返回原文"
+    button.setAttribute("aria-label", "返回旁注 " + note.dataset.sidenote + " 的原文")
+    note.append(button)
+    return button
+  })
   const click = (event: MouseEvent) => {
     const target = event.target
-    if (!(target instanceof HTMLElement)) return
-    const segment = target.closest<HTMLElement>("[data-sidenote-refs]")
-    if (segment && !target.closest("a, button, summary") && !getSelection()?.toString()) {
-      selectNotes(segment)
+    if (event.defaultPrevented || !(target instanceof Element) || getSelection()?.toString()) return
+    const button = target.closest<HTMLElement>("[data-sidenote-return]")
+    if (!button && target.closest("a, button, summary, input, select, textarea, label")) return
+    const card = target.closest<HTMLElement>("[data-sidenote-card], details[data-sidenote]")
+    const noteId = button?.dataset.sidenoteReturn ?? card?.dataset.sidenoteCard ?? card?.dataset.sidenote
+    if (noteId) {
+      const matching = segments.filter((segment) => idsFor(segment).includes(noteId))
+      if (button && !event.detail) controls.find((control) => idsFor(control).includes(noteId))?.focus({ preventScroll: true })
+      outline("text", matching)
+      return
     }
+    const segment = controlFor(target)
+    if (segment) selectNotes(segment)
   }
 
   const toggle = (event: Event) => {
@@ -145,6 +177,7 @@ export function enhanceSidenotes(article: HTMLElement) {
       selection = selection.filter((id) => id !== note.dataset.sidenote)
       if (anchor && !idsFor(anchor).some((id) => selection.includes(id))) anchor = undefined
       paint()
+      outline("blocks", [])
     }
   }
 
@@ -196,6 +229,7 @@ export function enhanceSidenotes(article: HTMLElement) {
       control.removeAttribute("aria-expanded")
     }
     for (const note of notes) note.hidden = false
+    for (const button of returnButtons) button.remove()
     delete article.dataset.enhanced
   }
   document.addEventListener("astro:after-swap", dispose)

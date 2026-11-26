@@ -1,6 +1,36 @@
-import { expect, test, type Locator } from "@playwright/test"
+import { expect, test, type Locator, type Page } from "@playwright/test"
 
 const article = "/posts/reading/markdown/"
+
+async function recordAnnotationOutlines(page: Page) {
+  await page.addInitScript(() => {
+    const contours = new WeakMap<Path2D, { x: number; y: number }[]>()
+    const { arcTo } = Path2D.prototype
+    const { stroke } = CanvasRenderingContext2D.prototype
+    Path2D.prototype.arcTo = function (this: Path2D, x, y, x2, y2, radius) {
+      const points = contours.get(this) ?? []
+      points.push({ x, y })
+      contours.set(this, points)
+      arcTo.call(this, x, y, x2, y2, radius)
+    }
+    CanvasRenderingContext2D.prototype.stroke = function (this: CanvasRenderingContext2D, path?: Path2D) {
+      const points = path && contours.get(path)
+      if (points && this.canvas.hasAttribute("data-annotation-outline") && !this.getLineDash().length) {
+        const outlines = JSON.parse(this.canvas.dataset.closedOutlines ?? "[]") as { x: number; y: number }[][]
+        if (!outlines.some((outline) => JSON.stringify(outline) === JSON.stringify(points))) {
+          this.canvas.dataset.closedOutlines = JSON.stringify([...outlines, points])
+        }
+      }
+      Reflect.apply(stroke, this, path ? [path] : [])
+    }
+  })
+  const canvas = page.locator("canvas[data-annotation-outline]")
+  return async (count: number) => {
+    const closed = () => canvas.evaluate((element) => JSON.parse((element as HTMLElement).dataset.closedOutlines ?? "[]") as { x: number; y: number }[][])
+    await expect.poll(async () => (await closed()).length).toBe(count)
+    return closed()
+  }
+}
 
 async function expectEasedReadingJump(link: Locator) {
   const positions = await link.evaluate(async (element) => {
@@ -804,6 +834,7 @@ test("link underline finishes sweeping right before replaying on re-entry", asyn
 })
 
 test("footnotes highlight the entry and return to the annotated clause", async ({ page }) => {
+  const outlines = await recordAnnotationOutlines(page)
   await page.setViewportSize({ width: 1000, height: 440 })
   await page.goto("/posts/footnote-highlight-demo/")
   const reference = page.getByRole("link", { name: "查看脚注 2", exact: true })
@@ -823,11 +854,12 @@ test("footnotes highlight the entry and return to the annotated clause", async (
   await expectEasedReadingJump(reference)
   await expect(page).toHaveURL(/#user-content-fn-2$/u)
   const note = page.locator("#user-content-fn-2")
-  await expect.poll(() => note.evaluate((element) => getComputedStyle(element, "::after").boxShadow)).toContain("inset")
+  const [footnote] = await outlines(1)
+  const backlink = await note.getByRole("link", { name: "返回引用处" }).boundingBox()
+  expect(Math.max(...footnote.map(({ x }) => x))).toBeLessThan(backlink!.x)
   await expectEasedReadingJump(note.getByRole("link", { name: "返回引用处" }))
   await expect(page).toHaveURL(/#user-content-fnref-2$/u)
-  const overlay = paragraph.locator(".footnote-clause-overlay > span")
-  await expect(overlay.first()).toBeVisible()
+  const [outline] = await outlines(1)
   const alignment = await paragraph.evaluate((element) => {
     const nodes = [...element.childNodes].filter((node): node is Text => node.nodeType === Node.TEXT_NODE)
     const text = nodes.find((node) => node.data.startsWith("角标标注括号内文本"))!
@@ -835,10 +867,10 @@ test("footnotes highlight the entry and return to the annotated clause", async (
     selected.setStart(text, 0)
     selected.setEnd(text, text.length)
     const expected = selected.getBoundingClientRect()
-    const actual = element.querySelector(".footnote-clause-overlay > span")!.getBoundingClientRect()
-    return Math.abs(actual.left + 2 - expected.left) + Math.abs(actual.width - 4 - expected.width)
+    return { left: expected.left + scrollX, right: expected.right + scrollX }
   })
-  expect(alignment).toBeLessThan(2)
+  expect(Math.min(...outline.map(({ x }) => x)) + 3).toBeCloseTo(alignment.left, 0)
+  expect(Math.max(...outline.map(({ x }) => x)) - 3).toBeCloseTo(alignment.right, 0)
   expect((await paragraph.boundingBox())!.height).toBe(height)
   await expect
     .poll(() =>
@@ -848,6 +880,45 @@ test("footnotes highlight the entry and return to the annotated clause", async (
       })
     )
     .toBeLessThan(3)
+})
+
+test("a wrapped footnote return traces one contour around the complete phrase", async ({ page }) => {
+  const outlines = await recordAnnotationOutlines(page)
+  await page.setViewportSize({ width: 390, height: 720 })
+  await page.goto("/posts/footnote-highlight-demo/")
+  await page.getByRole("link", { name: "查看脚注 1" }).click()
+  const note = page.locator("#user-content-fn-1")
+  await expect(note).toBeInViewport()
+  await note.getByRole("link", { name: "返回引用处" }).click()
+  await expect(page).toHaveURL(/#user-content-fnref-1$/u)
+  const [outline] = await outlines(1)
+  expect(outline.length).toBeGreaterThan(4)
+  const badge = await page.locator("#user-content-fnref-1").evaluate((element) => {
+    const { left, top, width, height } = element.getBoundingClientRect()
+    return { x: left + width / 2 + scrollX, y: top + height / 2 + scrollY }
+  })
+  const crossings = outline.filter((point, index) => {
+    const previous = outline.at(index - 1)!
+    return point.x === previous.x && point.x > badge.x && point.y > badge.y !== previous.y > badge.y
+  })
+  expect(crossings.length % 2).toBe(0)
+})
+
+test("sidenote outlines only mark the destination in both directions", async ({ page }) => {
+  const outlines = await recordAnnotationOutlines(page)
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.goto(article)
+  const panel = page.getByRole("complementary", { name: "旁注" })
+  const overlap = page.getByRole("button", { name: "记录", exact: true }).and(page.locator('[data-sidenote-refs="1 2"]'))
+  await overlap.click()
+  const cards = await outlines(2)
+  const railLeft = (await panel.boundingBox())!.x
+  expect(cards.flat().every(({ x }) => x >= railLeft - 5)).toBe(true)
+  const button = panel.getByRole("button", { name: "返回旁注 2 的原文" })
+  await button.press("Enter")
+  const [text] = await outlines(1)
+  expect(text.every(({ x }) => x < railLeft)).toBe(true)
+  await expect(overlap).toBeFocused()
 })
 
 test("the header stays in place when navigation adds a document scrollbar", async ({ page }) => {
