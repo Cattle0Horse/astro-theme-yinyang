@@ -6,7 +6,7 @@ import { closeHeaderMenu, openHeaderMenu } from "../components/header-menu"
 const partNames = ["title", "time"] as const
 const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)")
 const root = document.documentElement
-const interruptEvents = ["pointerdown", "wheel", "touchmove", "keydown"] as const
+const interruptEvents = ["pointerdown", "click", "wheel", "touchmove", "keydown"] as const
 let pendingNavigation: { href: string } | undefined
 let loadingTimer = 0
 let stopEntrance: (() => void) | undefined
@@ -118,10 +118,9 @@ function prepareEntryTransition({ newDocument, signal }: TransitionBeforePrepara
   )
 }
 
-function animateEntrance(transition: ViewTransition, signal: AbortSignal) {
-  if (signal.aborted || reducedMotion.matches) return
+function animateEntrance() {
   const candidates = document.querySelectorAll<HTMLElement>(
-    "#main .article-heading, #main .article > .reading > *, #main .article-edit, #main .timeline-heading, #main .timeline-item, #main .section-title, #main .notes-pagination"
+    "#main .article-heading, #main .article > .reading > *, #main .article-edit, #main .timeline-heading, #main .timeline-item, #main .section-title, #main .notes-pagination, #main .tag-list > li"
   )
   const animations: Animation[] = []
   for (const element of candidates) {
@@ -138,10 +137,10 @@ function animateEntrance(transition: ViewTransition, signal: AbortSignal) {
       )
     )
   }
-  const sidebar = document.querySelector<HTMLElement>(".toc-desktop")
-  if (sidebar && visibleBounds(sidebar)) {
+  for (const toc of document.querySelectorAll<HTMLElement>("#main :is(.toc-desktop, .toc-open)")) {
+    if (!visibleBounds(toc)) continue
     animations.push(
-      sidebar.animate(
+      toc.animate(
         [
           { opacity: 0, translate: "0 24px" },
           { opacity: 1, translate: "0 0" }
@@ -149,9 +148,10 @@ function animateEntrance(transition: ViewTransition, signal: AbortSignal) {
         { delay: 215, duration: 420, easing: "cubic-bezier(.22,1,.36,1)", fill: "backwards" }
       )
     )
-    const scroller = sidebar.querySelector("[data-toc-scroll]")?.getBoundingClientRect()
+    if (!toc.matches(".toc-desktop")) continue
+    const scroller = toc.querySelector("[data-toc-scroll]")?.getBoundingClientRect()
     let index = 0
-    for (const link of sidebar.querySelectorAll<HTMLElement>(".toc-links a")) {
+    for (const link of toc.querySelectorAll<HTMLElement>(".toc-links a")) {
       const bounds = visibleBounds(link)
       if (!bounds || !scroller || bounds.bottom <= scroller.top || bounds.top >= scroller.bottom) continue
       animations.push(
@@ -164,7 +164,7 @@ function animateEntrance(transition: ViewTransition, signal: AbortSignal) {
         )
       )
     }
-    const indicator = sidebar.querySelector<HTMLElement>(".toc-indicator")
+    const indicator = toc.querySelector<HTMLElement>(".toc-indicator")
     if (indicator)
       animations.push(
         indicator.animate(
@@ -176,7 +176,13 @@ function animateEntrance(transition: ViewTransition, signal: AbortSignal) {
         )
       )
   }
-  if (!animations.length) return
+  return animations
+}
+
+document.addEventListener("astro:before-swap", (event) => {
+  const { viewTransition, signal, to } = event as TransitionBeforeSwapEvent
+  if (signal.aborted) return
+  let animations: Animation[] = []
   const listeners = new AbortController()
   const cleanup = () => {
     listeners.abort()
@@ -185,25 +191,24 @@ function animateEntrance(transition: ViewTransition, signal: AbortSignal) {
   }
   const stop = () => {
     animations.forEach((animation) => animation.cancel())
-    transition.skipTransition()
+    viewTransition.skipTransition()
     cleanup()
   }
   stopEntrance = stop
   signal.addEventListener("abort", stop, { once: true })
   for (const type of interruptEvents) document.addEventListener(type, stop, { capture: true, passive: true, signal: listeners.signal })
-  void Promise.allSettled(animations.map((animation) => animation.finished)).then(cleanup)
-}
-
-document.addEventListener("astro:before-swap", (event) => {
-  const { viewTransition, signal, to } = event as TransitionBeforeSwapEvent
-  if (to.hash) return
-  // Start after the swap, when the live content and restored scroll are available.
+  window.addEventListener("popstate", stop, { signal: listeners.signal })
   document.addEventListener(
     "astro:after-swap",
     () => {
-      requestAnimationFrame(() => animateEntrance(viewTransition, signal))
+      // Let the other swap handlers mark the shared elements before choosing what slides in.
+      queueMicrotask(() => {
+        if (listeners.signal.aborted) return
+        if (!to.hash && !reducedMotion.matches) animations = animateEntrance()
+        void Promise.allSettled([viewTransition.finished, ...animations.map((animation) => animation.finished)]).then(cleanup)
+      })
     },
-    { once: true, signal }
+    { once: true, signal: listeners.signal }
   )
 })
 

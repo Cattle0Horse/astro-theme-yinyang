@@ -345,3 +345,70 @@ test("shows loading on a slow navigation then staggers the entrance until readin
   await expect(page.locator(".toc-desktop .toc-indicator")).toBeVisible()
   await expect(page.getByRole("status").filter({ hasText: "正在加载" })).toBeHidden()
 })
+
+test("an immediate footnote activation skips the entrance and restores the correct history entries", async ({ page }) => {
+  await page.addInitScript(() => {
+    document.addEventListener(
+      "astro:after-swap",
+      () => {
+        const reference = document.querySelector<HTMLAnchorElement>(".reading a[data-footnote-ref]")
+        if (!reference) return
+        reference.click()
+        requestAnimationFrame(() => {
+          const motion = document.getAnimations().some((animation) => {
+            const effect = animation.effect
+            return effect instanceof KeyframeEffect && (effect.target?.matches(".reading > *") || effect.pseudoElement?.startsWith("::view-transition"))
+          })
+          document.body.dataset.interruptedEntrance = String(!motion)
+        })
+      },
+      { capture: true, once: true }
+    )
+  })
+  await page.goto("/")
+  await page.evaluate(() => {
+    const link = document.createElement("a")
+    link.href = "/posts/footnote-highlight-demo/"
+    document.body.append(link)
+    link.click()
+  })
+  const article = /\/posts\/footnote-highlight-demo\/$/u
+  const fragment = /#user-content-fn-1$/u
+  const note = page.locator("#user-content-fn-1")
+  await expect(page).toHaveURL(fragment)
+  await expect(page.locator("body")).toHaveAttribute("data-interrupted-entrance", "true")
+  await expect(note).toBeInViewport()
+  await page.goBack()
+  await expect(page).toHaveURL(article)
+  await expect.poll(() => page.evaluate(() => scrollY)).toBe(0)
+  await page.goForward()
+  await expect(page).toHaveURL(fragment)
+  await expect(note).toBeInViewport()
+})
+
+test("the mobile TOC button and visible tags join the page entrance", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 800 })
+  await page.goto("/")
+  await page.locator('a[href="/posts/reading/markdown/"]').first().click()
+  const toc = page.getByRole("button", { name: "打开目录" })
+  await expect.poll(() => toc.evaluate((element) => element.getAnimations().some((animation) => animation.effect?.getTiming().delay === 215))).toBe(true)
+  await toc.press("Enter")
+  await expect(page.getByRole("dialog")).toBeVisible()
+  await page.keyboard.press("Escape")
+  await page.evaluate(() => {
+    const tags = document.createElement("a")
+    tags.href = "/tags/"
+    document.body.append(tags)
+    tags.click()
+  })
+  await expect(page).toHaveURL(/\/tags\/$/u)
+  const timing = await page.locator(".tag-link").evaluateAll((tags) =>
+    tags.slice(0, 3).map((tag) =>
+      tag.parentElement
+        ?.getAnimations()
+        .find((animation) => (animation.effect as KeyframeEffect).getKeyframes().some((frame) => frame.translate === "0px 24px"))
+        ?.effect?.getTiming()
+    )
+  )
+  expect(timing.map((item) => item?.delay)).toEqual([125, 170, 215])
+})
