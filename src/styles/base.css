@@ -41,6 +41,7 @@
   --rule: #e4e4e7;
   --rule-light: #f0f0f2;
   --panel: #fff;
+  --reading-backdrop: color-mix(in srgb, var(--ink) 18%, transparent);
   --scrollbar-thumb: rgb(128 128 128 / 28%);
   --scrollbar-hover: rgb(128 128 128 / 46%);
   --indigo: #3559d8;
@@ -122,6 +123,7 @@
   --rule: #3e444e;
   --rule-light: #30353d;
   --panel: #22252a;
+  --reading-backdrop: color-mix(in srgb, var(--paper) 40%, transparent);
   --indigo: #7b93ea;
 }
 :root[data-theme="dark"][data-palette="violet"],

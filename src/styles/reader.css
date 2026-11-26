@@ -380,7 +380,6 @@
 }
 [data-sidenote-dialog] {
   --sidenote-dialog-width: min(26rem, calc(100vw - 2rem));
-  --sidenote-backdrop: color-mix(in srgb, var(--ink) 18%, transparent);
   position: fixed;
   inset-block: 0;
   inset-inline-start: calc((100vw - var(--sidenote-dialog-width)) / 2);
@@ -409,15 +408,12 @@
   transition-duration: 150ms;
 }
 [data-sidenote-dialog][open]::backdrop {
-  background-color: var(--sidenote-backdrop);
+  background-color: var(--reading-backdrop);
   transition: background-color 180ms ease-out;
 }
 [data-sidenote-dialog][open][data-closing]::backdrop {
   background-color: transparent;
   transition: background-color 150ms ease-in;
-}
-:root[data-theme="dark"] [data-sidenote-dialog] {
-  --sidenote-backdrop: color-mix(in srgb, var(--paper) 40%, transparent);
 }
 @starting-style {
   [data-sidenote-dialog][open] {
