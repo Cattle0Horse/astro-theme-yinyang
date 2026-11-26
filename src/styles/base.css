@@ -217,7 +217,7 @@ a {
   inherits: false;
   initial-value: 0%;
 }
-:where(.header-desktop .header-link) {
+:where(.reading a[href]:not(.heading-permalink, .icon-button, :has(img)), .header-desktop .header-link, .article-edit a, a:is(.note-source, .tag-link):not(.timeline *)) {
   background-image:
     linear-gradient(to right, transparent var(--link-underline-start), var(--accent) var(--link-underline-start) var(--link-underline-end), transparent var(--link-underline-end)),
     linear-gradient(var(--link-rest-line, transparent), var(--link-rest-line, transparent));

@@ -1,4 +1,5 @@
 const desktopLinks = ".header-desktop .header-link"
+const links = `.reading a[href]:not(.heading-permalink, .icon-button, :has(img)), ${desktopLinks}, .article-edit a, a:is(.note-source, .tag-link):not(.timeline *)`
 
 interface UnderlineState {
   hover: boolean
@@ -57,7 +58,7 @@ function update(link: HTMLAnchorElement, kind: "hover" | "focus", active: boolea
 
 function pointerUnderline(event: PointerEvent) {
   if (event.pointerType === "touch") return
-  const link = event.target instanceof Element ? event.target.closest<HTMLAnchorElement>(desktopLinks) : null
+  const link = event.target instanceof Element ? event.target.closest<HTMLAnchorElement>(links) : null
   if (!link || (event.relatedTarget instanceof Node && link.contains(event.relatedTarget))) return
   const transition = transitionDocument.activeViewTransition
   if (transition && link.matches(desktopLinks)) {
@@ -91,7 +92,7 @@ function reconcileDesktopHover(transition: ViewTransition, event: PointerEvent) 
 
 function focusUnderline(event: FocusEvent) {
   const link = event.target
-  if (!(link instanceof HTMLAnchorElement) || !link.matches(desktopLinks)) return
+  if (!(link instanceof HTMLAnchorElement) || !link.matches(links)) return
   update(link, "focus", event.type === "focusin" && link.matches(":focus-visible"))
 }
 

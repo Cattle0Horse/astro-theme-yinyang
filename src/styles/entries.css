@@ -114,7 +114,6 @@ a.notes-page-link:active {
 }
 a.note-entry-time:is(:hover, :focus-visible) {
   color: var(--accent);
-  text-decoration: underline;
 }
 .note-entry-title {
   margin-block-end: 8px;
@@ -182,7 +181,6 @@ a.note-source:focus-visible {
 .entry-name:hover,
 .entry-name:focus-visible {
   color: var(--accent);
-  text-decoration: underline;
 }
 .section-title {
   font-size: var(--fs-title);
@@ -249,7 +247,6 @@ a.note-source:focus-visible {
 .article-edit a:hover,
 .article-edit a:focus-visible {
   color: var(--accent);
-  text-decoration: underline;
 }
 .entry-meta {
   display: flex;
@@ -260,17 +257,23 @@ a.note-source:focus-visible {
 }
 .tag-link,
 .article-action {
-  text-decoration: underline;
   color: var(--muted);
   overflow-wrap: anywhere;
+}
+.tag-link:not(.timeline *) {
+  --link-rest-line: currentColor;
+}
+.article-action {
+  text-decoration: underline;
 }
 .tag-link:hover,
 .article-action:hover {
   color: var(--accent);
 }
-:is(.header-link, .entry-name, .note-entry-time, .note-source, .tag-link, .article-action, .article-edit a):active {
+:is(.header-link, .entry-name, .note-entry-time, a.note-source, .tag-link, .article-action, .article-edit a):active {
   color: var(--ink);
-  text-decoration: underline;
+}
+.article-action:active {
   text-decoration-thickness: 2px;
 }
 .article-toolbar {

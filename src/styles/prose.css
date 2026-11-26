@@ -85,15 +85,8 @@
   }
 }
 .reading a {
+  --link-rest-line: currentColor;
   color: var(--accent);
-  text-decoration: underline;
-}
-.reading a:is(:hover, :focus-visible) {
-  color: var(--ink);
-}
-.reading a:active {
-  text-decoration: underline;
-  text-decoration-thickness: 2px;
 }
 .reading a.heading-permalink {
   display: inline-block;

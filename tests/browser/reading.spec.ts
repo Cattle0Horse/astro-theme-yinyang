@@ -774,6 +774,35 @@ test("heading fragments point to their destination and replay after another acti
   await expect.poll(arrowOpacity).toBeGreaterThan(0)
 })
 
+test("link underline finishes sweeping right before replaying on re-entry", async ({ page }) => {
+  await page.goto("/posts/footnote-highlight-demo/")
+  const link = page.getByRole("link", { name: "查看脚注 2", exact: true })
+  await link.hover()
+  await expect(link).toHaveCSS("--link-underline-end", "100%")
+  await page.mouse.move(0, 0)
+  const duringExit = await link.evaluate((element) => {
+    const exit = element.getAnimations().find((animation) => !(animation instanceof CSSTransition))!
+    exit.pause()
+    exit.currentTime = Number(exit.effect!.getComputedTiming().activeDuration) / 2
+    return parseFloat(getComputedStyle(element).getPropertyValue("--link-underline-start"))
+  })
+  expect(duringExit).toBeGreaterThan(0)
+  expect(duringExit).toBeLessThan(100)
+
+  await link.hover()
+  const onReentry = await link.evaluate((element) => {
+    const start = parseFloat(getComputedStyle(element).getPropertyValue("--link-underline-start"))
+    element
+      .getAnimations()
+      .find((animation) => !(animation instanceof CSSTransition))!
+      .finish()
+    return start
+  })
+  expect(onReentry).toBeCloseTo(duringExit)
+  await expect(link).toHaveCSS("--link-underline-start", "0%")
+  await expect(link).toHaveCSS("--link-underline-end", "100%")
+})
+
 test("footnotes highlight the entry and return to the annotated clause", async ({ page }) => {
   await page.setViewportSize({ width: 1000, height: 440 })
   await page.goto("/posts/footnote-highlight-demo/")
