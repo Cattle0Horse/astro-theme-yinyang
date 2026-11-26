@@ -152,17 +152,30 @@
   min-inline-size: 1.25rem;
   min-block-size: 1.125rem;
   margin-inline: 2px;
-  padding-inline: 0.25em;
-  border: 1px solid color-mix(in srgb, var(--accent) 32%, transparent);
-  border-radius: 0.4em;
-  background-color: color-mix(in srgb, var(--accent) 8%, var(--paper));
+  padding-inline: 0.35em;
   background-position: left calc(100% - 1px);
   font: var(--ui-weight-strong) var(--fs-note)/1.2 var(--ui-font);
+  font-variant-numeric: tabular-nums;
   text-align: center;
-  transition: background-color 160ms ease;
 }
-.reading [data-footnote-ref]:is(:hover, :focus-visible, :active) {
-  background-color: color-mix(in srgb, var(--accent) 16%, var(--paper));
+.reading [data-footnote-ref]::before {
+  content: "";
+  position: absolute;
+  inset-block: 0.1em 0.25em;
+  inset-inline: 0;
+  border-inline: 1px solid currentColor;
+  background:
+    linear-gradient(currentColor, currentColor) left top / 3px 1px no-repeat,
+    linear-gradient(currentColor, currentColor) right top / 3px 1px no-repeat,
+    linear-gradient(currentColor, currentColor) left bottom / 3px 1px no-repeat,
+    linear-gradient(currentColor, currentColor) right bottom / 3px 1px no-repeat;
+  background-origin: border-box;
+  opacity: 0.65;
+  transition: opacity 160ms ease;
+  pointer-events: none;
+}
+.reading [data-footnote-ref]:is(:hover, :focus-visible, :active)::before {
+  opacity: 1;
 }
 @media (pointer: coarse) {
   .reading [data-footnote-ref]::after {
