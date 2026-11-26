@@ -68,6 +68,20 @@ function entryPair(outgoing: Document, incoming: Document) {
   return oldDetail ? { from: detail, to: preview } : { from: preview, to: detail }
 }
 
+function prepareOutgoingContent(signal: AbortSignal) {
+  const content = document.querySelector<HTMLElement>("#main")
+  if (!content) return
+  // Separate the captures so the old content keeps its own viewport position.
+  content.style.viewTransitionName = "reading-outgoing"
+  const cleanup = () => {
+    content.style.removeProperty("view-transition-name")
+    signal.removeEventListener("abort", cleanup)
+    document.removeEventListener("astro:after-swap", cleanup)
+  }
+  signal.addEventListener("abort", cleanup, { once: true })
+  document.addEventListener("astro:after-swap", cleanup, { once: true })
+}
+
 function prepareEntryTransition({ newDocument, signal }: TransitionBeforePreparationEvent) {
   const pair = entryPair(document, newDocument)
   if (!pair) return
@@ -234,8 +248,9 @@ document.addEventListener("astro:before-preparation", (event) => {
     setNavigationLoading(true)
     try {
       await load()
-      if (supportsViewTransitions && !reducedMotion.matches && !signal.aborted && !preparation.defaultPrevented && !preparation.to.hash) {
-        prepareEntryTransition(preparation)
+      if (supportsViewTransitions && !reducedMotion.matches && !signal.aborted && !preparation.defaultPrevented) {
+        prepareOutgoingContent(signal)
+        if (!preparation.to.hash) prepareEntryTransition(preparation)
       }
     } catch (error) {
       finish()

@@ -10,9 +10,15 @@
 }
 ::view-transition-group(entry-title),
 ::view-transition-group(entry-time) {
-  z-index: 1;
+  z-index: 2;
   animation-duration: var(--entry-transition-duration, 300ms);
   animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+::view-transition-group(reading-outgoing) {
+  z-index: 1;
+}
+::view-transition-old(reading-outgoing) {
+  animation: reading-page-out 140ms ease-in both;
 }
 ::view-transition-old(entry-title),
 ::view-transition-new(entry-title),

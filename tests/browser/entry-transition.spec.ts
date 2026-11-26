@@ -125,6 +125,7 @@ test("repeated Notes navigation loads once and reselecting Notes returns to the 
   })
   let requests = 0
   await page.route("**/notes/", async (route) => {
+    if (route.request().headers()["sec-purpose"] === "prefetch") return route.continue()
     requests++
     await pending
     await route.continue()
@@ -378,12 +379,25 @@ test("an immediate footnote activation skips the entrance and restores the corre
   await expect(page).toHaveURL(fragment)
   await expect(page.locator("body")).toHaveAttribute("data-interrupted-entrance", "true")
   await expect(note).toBeInViewport()
+  await expect
+    .poll(() =>
+      note.evaluate((element) => {
+        const { top, height } = element.getBoundingClientRect()
+        const root = document.documentElement
+        const centered = scrollY + top - (innerHeight - height) / 2
+        const target = Math.max(0, Math.min(centered, root.scrollHeight - root.clientHeight))
+        return Math.abs(scrollY - target)
+      })
+    )
+    .toBeLessThanOrEqual(1)
+  const beforeBack = await page.evaluate(() => scrollY)
   await page.goBack()
   await expect(page).toHaveURL(article)
   await expect.poll(() => page.evaluate(() => scrollY)).toBe(0)
   await page.goForward()
   await expect(page).toHaveURL(fragment)
   await expect(note).toBeInViewport()
+  await expect.poll(() => page.evaluate((expected) => Math.abs(scrollY - expected), beforeBack)).toBeLessThanOrEqual(2)
 })
 
 test("the mobile TOC button and visible tags join the page entrance", async ({ page }) => {
@@ -411,4 +425,58 @@ test("the mobile TOC button and visible tags join the page entrance", async ({ p
     )
   )
   expect(timing.map((item) => item?.delay)).toEqual([125, 170, 215])
+})
+
+test("the outgoing page keeps a horizontally scrolled code block at its original position", async ({ page }) => {
+  await page.setViewportSize({ width: 1024, height: 680 })
+  await page.addInitScript(() => {
+    document.addEventListener("astro:after-swap", () => {
+      const style = document.createElement("style")
+      style.textContent = `
+        ::view-transition-old(reading-content), ::view-transition-old(reading-outgoing) { animation-play-state: paused !important }
+        ::view-transition-new(reading-content) { opacity: 0 !important }
+      `
+      document.head.append(style)
+    })
+    document.addEventListener("astro:before-swap", (event) => {
+      const { viewTransition } = event as TransitionBeforeSwapEvent
+      void viewTransition.ready.then(() => {
+        document.body.dataset.outgoingReady = "true"
+      })
+    })
+  })
+  await page.goto("/posts/syntax-highlighting-test/")
+  const code = page.locator(".reading pre").first()
+  const point = await code.evaluate((block) => {
+    if (!(block instanceof HTMLElement)) throw new Error("Expected a scrollable code block")
+    const code = block.querySelector("code")!
+    code.style.display = "block"
+    code.style.minWidth = "1500px"
+    block.style.position = "relative"
+    const marker = block.appendChild(document.createElement("span"))
+    marker.style.cssText = "position:absolute;left:420px;top:6px;width:18px;height:18px;background:rgb(250,7,117)"
+    block.scrollLeft = 400
+    block.scrollIntoView({ block: "center" })
+    const { left, top } = marker.getBoundingClientRect()
+    return { x: Math.round(left + 8), y: Math.round(top + 8), width: 1, height: 1 }
+  })
+  expect(await code.evaluate((block) => block.scrollLeft)).toBe(400)
+  const pixel = async () => {
+    const screenshot = await page.screenshot({ clip: point, scale: "css" })
+    return page.evaluate(async (encoded) => {
+      const image = await createImageBitmap(await fetch("data:image/png;base64," + encoded).then((response) => response.blob()))
+      const context = new OffscreenCanvas(1, 1).getContext("2d")!
+      context.drawImage(image, 0, 0)
+      return Array.from(context.getImageData(0, 0, 1, 1).data)
+    }, screenshot.toString("base64"))
+  }
+  expect(await pixel()).toEqual([250, 7, 117, 255])
+  await page.evaluate(() => {
+    const link = document.createElement("a")
+    link.href = "/notes/"
+    document.body.append(link)
+    link.click()
+  })
+  await expect(page.locator("body")).toHaveAttribute("data-outgoing-ready", "true")
+  expect(await pixel()).toEqual([250, 7, 117, 255])
 })
