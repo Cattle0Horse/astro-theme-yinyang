@@ -306,8 +306,8 @@
   box-shadow: none;
   font: var(--fs-meta)/1.4 var(--ui-font);
 }
-.code-fold .code-fold-button:hover {
-  color: var(--ink);
+.code-fold .code-fold-button:is(:hover, :focus-visible) {
+  color: var(--accent);
 }
 [data-code-block]:has(> pre[data-collapsed]) .code-fold {
   background: linear-gradient(to bottom, transparent, var(--code-bg) 60%);

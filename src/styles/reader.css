@@ -267,7 +267,7 @@
 .reading .math-actions .icon-button:hover,
 .reading .math-actions .icon-button:focus-visible {
   color: var(--accent);
-  box-shadow: 0 2px 8px #0002;
+  box-shadow: var(--control-hover-shadow);
 }
 :root:not([data-js]) .math-actions {
   display: none;

@@ -101,7 +101,7 @@
 }
 .header-menu .header-link:is(:hover, :focus-visible) {
   color: var(--accent);
-  background: color-mix(in srgb, var(--ink) 5%, var(--panel));
+  background-color: var(--control-hover-fill);
 }
 .header-menu summary::-webkit-details-marker {
   display: none;

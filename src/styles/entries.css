@@ -26,10 +26,12 @@ a.notes-page-link {
   border-radius: 6px;
   transition:
     color 160ms ease,
+    box-shadow 160ms ease,
     scale 160ms ease;
 }
 a.notes-page-link:is(:hover, :focus-visible) {
-  color: var(--ink);
+  box-shadow: var(--control-hover-shadow);
+  color: var(--accent);
 }
 a.notes-page-link:active {
   scale: 0.91;

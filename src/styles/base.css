@@ -75,7 +75,8 @@
   --code-rule: color-mix(in srgb, var(--accent) 15%, var(--rule-light));
   --table-head: color-mix(in srgb, var(--accent) 7%, var(--paper));
   --table-stripe: color-mix(in srgb, var(--prose-ink) 3%, var(--paper));
-  --control-hover-shadow: 0 3px 10px #0003;
+  --control-hover-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent), 0 3px 10px #0003;
+  --control-hover-fill: color-mix(in srgb, var(--accent) 12%, transparent);
 }
 :root[data-font-size="14"] {
   --font-size: 14;

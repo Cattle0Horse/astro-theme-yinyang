@@ -4,7 +4,7 @@
   padding: clamp(20px, 5vh, 64px) 0 48px;
   text-align: center;
   --nf-soft: color-mix(in srgb, var(--accent) 8%, var(--paper));
-  --nf-hover: color-mix(in srgb, var(--ink) 5%, var(--panel));
+  --nf-hover: var(--control-hover-fill);
   --nf-shadow: #0002;
   --nf-void: #111216;
 }
