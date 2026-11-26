@@ -6,11 +6,6 @@ export interface SidenoteOutline {
   targets: HTMLElement[]
 }
 
-interface OutlineOptions {
-  dialog?: HTMLDialogElement | null
-  onStop?: () => void
-}
-
 let clearOutline: (() => void) | undefined
 let pendingSidenote = 0
 let cancelSidenoteScroll: (() => void) | undefined
@@ -45,15 +40,17 @@ function distanceAt(pace: ReturnType<typeof outlinePace>, time: number) {
   return (left + part) * pace.step
 }
 
-export function playAnnotationOutline(groups: readonly (readonly OutlineRect[])[], kind: "text" | "blocks", { dialog, onStop }: OutlineOptions = {}) {
+export function playAnnotationOutline(groups: readonly (readonly OutlineRect[])[], kind: "text" | "blocks" | "rail", dialog?: HTMLDialogElement | null) {
   clearOutline?.()
   const x = dialog ? 0 : scrollX
   const y = dialog ? 0 : scrollY
+  const padding = kind === "rail" ? 0 : kind === "text" ? 3 : 4
+  const radius = kind === "rail" ? 0 : kind === "text" ? 5 : 7
   const paths = groups
     .filter((rects) => rects.length)
     .map((rects) => {
       const documentRects = rects.map(({ left, top, right, bottom }) => ({ left: left + x, right: right + x, top: top + y, bottom: bottom + y }))
-      const { path, length, turns } = createAnnotationContour(documentRects, kind === "text" ? 3 : 4, kind === "text" ? 5 : 7)
+      const { path, length, turns } = createAnnotationContour(documentRects, padding, radius)
       const pace = outlinePace(length, turns)
       return { path, length, pace, duration: Math.min(1000, Math.max(285, 155 + pace.travel * 0.76)), closedAt: undefined as number | undefined }
     })
@@ -72,6 +69,7 @@ export function playAnnotationOutline(groups: readonly (readonly OutlineRect[])[
   canvas.setAttribute("aria-hidden", "true")
   surface.lineWidth = 1.5
   surface.lineCap = "round"
+  surface.lineJoin = "round"
   surface.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue("--accent").trim()
   const host = dialog ?? document.body
   host.append(canvas)
@@ -85,7 +83,6 @@ export function playAnnotationOutline(groups: readonly (readonly OutlineRect[])[
     controller.abort()
     canvas.remove()
     if (clearOutline === stop) clearOutline = undefined
-    onStop?.()
   }
 
   function animate(now: number) {
@@ -141,24 +138,27 @@ document.addEventListener("sidenote:outline", (event) => {
     const dialog = first.closest<HTMLDialogElement>("dialog[data-sidenote-dialog][open]")
     const draw = () => {
       if (kind === "blocks") {
-        const blocks = targets.map((target) => ({ target, rect: target.getBoundingClientRect() })).filter(({ rect }) => rect.width > 0 && rect.height > 0)
-        const cards = blocks.map(({ target }) => target).filter((target) => target.hasAttribute("data-sidenote-card"))
-        const stop = playAnnotationOutline(
-          blocks.map(({ rect }) => [rect]),
-          "blocks",
-          {
-            dialog,
-            onStop: () => cards.forEach((card) => card.removeAttribute("data-outline-active"))
+        const sharesRail = first.hasAttribute("data-sidenote-card")
+        const blocks = targets.flatMap((target) => {
+          const { left, right, top, bottom, width, height } = target.getBoundingClientRect()
+          if (!width || !height) return []
+          if (!sharesRail) return [[{ left, right, top, bottom }]]
+          const style = getComputedStyle(target)
+          const halfRail = parseFloat(style.borderInlineStartWidth) / 2
+          // The contour follows the center of the existing border.
+          if (style.direction === "rtl") {
+            return [[{ left: left - 1, right: right - halfRail, top, bottom }]]
           }
-        )
-        if (stop) for (const card of cards) card.setAttribute("data-outline-active", "")
+          return [[{ left: left + halfRail, right: right + 1, top, bottom }]]
+        })
+        playAnnotationOutline(blocks, sharesRail ? "rail" : "blocks", dialog)
       } else {
         const rects = targets.flatMap((target) => {
           const range = document.createRange()
           range.selectNodeContents(target)
           return annotationTextRects(range)
         })
-        playAnnotationOutline([rects], "text", { dialog })
+        playAnnotationOutline([rects], "text", dialog)
       }
     }
     if (dialog) {

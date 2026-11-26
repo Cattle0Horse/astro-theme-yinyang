@@ -959,14 +959,24 @@ test("sidenote outlines only mark the destination in both directions", async ({ 
   const card = panel.getByRole("region", { name: "旁注 2" })
   await expect(card).not.toHaveCSS("border-inline-start-color", "rgba(0, 0, 0, 0)")
   await overlap.click()
-  await expect(card).toHaveCSS("border-inline-start-color", "rgba(0, 0, 0, 0)")
   const cards = await outlines(2)
   const railLeft = (await panel.boundingBox())!.x
-  expect(cards.flat().every(({ x }) => x >= railLeft - 5)).toBe(true)
+  const rails = await panel.getByRole("region").evaluateAll((notes) =>
+    notes.map((note) => {
+      const { left, top, bottom } = note.getBoundingClientRect()
+      const style = getComputedStyle(note)
+      return { x: left + scrollX + parseFloat(style.borderInlineStartWidth) / 2, top: top + scrollY, bottom: bottom + scrollY, color: style.borderInlineStartColor }
+    })
+  )
+  for (const rail of rails) {
+    expect(rail.color).not.toBe("rgba(0, 0, 0, 0)")
+    expect(cards.some((points) => points.some(({ x, y }) => x === rail.x && y === rail.top) && points.some(({ x, y }) => x === rail.x && y === rail.bottom))).toBe(true)
+  }
   await expect(page.locator("canvas[data-annotation-outline]")).toHaveCount(0)
   await expect(card).not.toHaveCSS("border-inline-start-color", "rgba(0, 0, 0, 0)")
   await overlap.click()
-  await expect(card).toHaveCSS("border-inline-start-color", "rgba(0, 0, 0, 0)")
+  await expect(page.locator("canvas[data-annotation-outline]")).toBeVisible()
+  await expect(card).not.toHaveCSS("border-inline-start-color", "rgba(0, 0, 0, 0)")
   await expect(card.getByText("返回原文")).toHaveCount(0)
   await card.press("Enter")
   const [text] = await outlines(1)
