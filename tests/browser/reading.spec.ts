@@ -150,6 +150,114 @@ test("all five typography groups survive client navigation and reload", async ({
   expect(errors).toEqual([])
 })
 
+test("the font slider follows drags and moves smoothly on release or track clicks", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" })
+  await page.goto(article)
+  await page.getByRole("button", { name: "调整字号" }).click()
+  const slider = page.getByRole("slider", { name: "全站字号" })
+  const bounds = (await slider.boundingBox())!
+  const y = bounds.y + bounds.height / 2
+  const body = page.locator(".reading")
+
+  await page.mouse.move(bounds.x + bounds.width / 2, y)
+  await page.mouse.down()
+  await expect(body).toHaveCSS("font-size", "15px")
+  await page.mouse.move(bounds.x + bounds.width * 0.61, y, { steps: 4 })
+  const first = await body.evaluate((element) => parseFloat(getComputedStyle(element).fontSize))
+  expect(first).toBeGreaterThan(16)
+  expect(first).toBeLessThan(17)
+  await page.mouse.move(bounds.x + bounds.width * 0.7, y, { steps: 4 })
+  const second = await body.evaluate((element) => parseFloat(getComputedStyle(element).fontSize))
+  expect(second).toBeGreaterThan(first)
+  expect(second).toBeLessThan(17)
+
+  type ReleaseFrame = { thumb: number; size: number }
+
+  type ReleaseWindow = Window & { sliderRelease?: Promise<ReleaseFrame[]> }
+
+  const sampleRelease = () =>
+    slider.evaluate((element) => {
+      const input = element as HTMLInputElement
+      const reading = document.querySelector(".reading")!
+      const browser = window as ReleaseWindow
+      browser.sliderRelease = new Promise<ReleaseFrame[]>((resolve) => {
+        window.addEventListener(
+          "pointerup",
+          () => {
+            const frames: ReleaseFrame[] = []
+            const start = performance.now()
+
+            function sample(now: number) {
+              frames.push({ thumb: input.valueAsNumber, size: parseFloat(getComputedStyle(reading).fontSize) })
+              if (now - start < 220) requestAnimationFrame(sample)
+              else resolve(frames)
+            }
+
+            requestAnimationFrame(sample)
+          },
+          { once: true, capture: true }
+        )
+      })
+    })
+  await page.mouse.move(bounds.x + bounds.width * 0.7, y + 80)
+  await sampleRelease()
+  await page.mouse.up()
+  const frames = await page.evaluate(() => (window as ReleaseWindow).sliderRelease!)
+  expect(frames.some(({ size }) => size > second + 0.005 && size < 16.995)).toBe(true)
+  let previous = second
+  for (const { thumb, size } of frames) {
+    expect(size).toBeGreaterThanOrEqual(previous - 0.005)
+    expect(size).toBeLessThanOrEqual(17)
+    expect(size).toBeCloseTo(thumb, 3)
+    previous = size
+  }
+  await expect(slider).toHaveValue("17")
+  await expect(body).toHaveCSS("font-size", "17px")
+
+  await page.mouse.move(bounds.x + bounds.width * 0.04, y)
+  await page.mouse.down()
+  await expect(slider).toHaveValue("17")
+  await expect(body).toHaveCSS("font-size", "17px")
+  await sampleRelease()
+  await page.mouse.up()
+  const clickedFrames = await page.evaluate(() => (window as ReleaseWindow).sliderRelease!)
+  expect(clickedFrames.some(({ size }) => size < 16.995 && size > 14.005)).toBe(true)
+  previous = 17
+  for (const { thumb, size } of clickedFrames) {
+    expect(size).toBeLessThanOrEqual(previous + 0.005)
+    expect(size).toBeGreaterThanOrEqual(14)
+    expect(size).toBeCloseTo(thumb, 3)
+    previous = size
+  }
+  await expect(slider).toHaveValue("14")
+  await page.reload()
+  await expect(body).toHaveCSS("font-size", "14px")
+})
+
+test("cancelling a touch drag restores the committed font size", async ({ browser }) => {
+  const page = await browser.newPage({ hasTouch: true, viewport: { width: 500, height: 800 } })
+  try {
+    const input = await page.context().newCDPSession(page)
+    await page.goto(article)
+    await page.getByRole("button", { name: "调整字号" }).tap()
+    const slider = page.getByRole("slider", { name: "全站字号" })
+    const body = page.locator(".reading")
+    const bounds = (await slider.boundingBox())!
+    const y = Math.round(bounds.y + bounds.height / 2)
+    const thumb = Math.round(bounds.x + bounds.width / 4)
+    await input.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x: thumb, y }] })
+    await input.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x: Math.round(bounds.x + bounds.width * 0.8), y }] })
+    await expect.poll(() => body.evaluate((element) => parseFloat(getComputedStyle(element).fontSize))).toBeGreaterThan(16)
+    await input.send("Input.dispatchTouchEvent", { type: "touchCancel", touchPoints: [] })
+    await expect(slider).toHaveValue("15")
+    await expect(body).toHaveCSS("font-size", "15px")
+    await slider.press("ArrowRight")
+    await expect(body).toHaveCSS("font-size", "16px")
+  } finally {
+    await page.close()
+  }
+})
+
 test("wide sidenotes stack and appearance remains usable when storage throws", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 })
   await page.addInitScript(() => {

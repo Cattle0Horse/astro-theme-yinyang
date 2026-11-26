@@ -227,6 +227,7 @@
   display: block;
   width: 100%;
   accent-color: var(--accent);
+  touch-action: none;
 }
 :is(.header-menu-toggle, .palette-option):hover {
   box-shadow: var(--control-hover-shadow);

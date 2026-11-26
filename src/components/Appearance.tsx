@@ -1,11 +1,20 @@
-import { useSyncExternalStore, type MouseEvent, type ToggleEvent } from "react"
+import { useEffect, useLayoutEffect, useRef, useSyncExternalStore, type MouseEvent, type PointerEvent, type ToggleEvent } from "react"
 import { ALargeSmall, Moon, Sun, Monitor } from "lucide-react"
 import type { Appearance as Preference, FontSize } from "../lib/appearance"
+import { createFontPreviewLayout } from "./font-preview-layout"
 import { IconButton } from "./ui/IconButton"
 
 interface Props {
   initial: Preference
   palettes: readonly { id: string; name: string }[]
+}
+
+interface SizeDrag {
+  pointerId: number | null
+  move: (clientX: number) => void
+  input: (size: number) => void
+  finish: (commit: boolean) => void
+  cancel: () => void
 }
 
 const modes = [
@@ -41,6 +50,22 @@ function focusMenu({ currentTarget: menu, newState }: ToggleEvent<HTMLDivElement
 }
 
 export default function Appearance({ initial, palettes }: Props) {
+  const drag = useRef<SizeDrag | null>(null)
+  const sliderRef = useRef<HTMLInputElement>(null)
+  const previewLayout = useRef<ReturnType<typeof createFontPreviewLayout> | null>(null)
+  useEffect(() => {
+    function clearPreview() {
+      drag.current?.cancel()
+      previewLayout.current?.clear()
+    }
+
+    document.addEventListener("astro:before-swap", clearPreview)
+    return () => {
+      document.removeEventListener("astro:before-swap", clearPreview)
+      clearPreview()
+    }
+  }, [])
+
   const hydrated = useSyncExternalStore(
     subscribeHydration,
     () => true,
@@ -51,10 +76,89 @@ export default function Appearance({ initial, palettes }: Props) {
     () => window.yinyangAppearance?.read() ?? initial,
     () => initial
   )
+  useLayoutEffect(() => {
+    if (sliderRef.current && !drag.current) sliderRef.current.value = String(current.size)
+  }, [current.size])
   const update = (value: Partial<Preference>) => window.yinyangAppearance?.update(value)
   const index = modes.findIndex(({ id }) => id === current.mode)
   const { label: modeLabel } = modes[index]
   const nextMode = modes[(index + 1) % modes.length]
+
+  function startSizeDrag({ currentTarget: slider, pointerId, button, isPrimary, clientX }: PointerEvent<HTMLInputElement>) {
+    if (button !== 0 || !isPrimary) return
+    const start = slider.valueAsNumber
+    drag.current?.cancel()
+    const layout = (previewLayout.current ??= createFontPreviewLayout())
+    layout.prepare()
+    const root = document.documentElement
+    let frame = 0
+    let moved = false
+    let target = start
+    const session: SizeDrag = { pointerId, move, input, finish, cancel }
+    drag.current = session
+    slider.step = "any"
+    slider.setPointerCapture(pointerId)
+    showSize(start)
+
+    function showSize(size: number) {
+      const value = String(size)
+      if (slider.value !== value) slider.value = value
+      if (root.style.getPropertyValue("--font-preview") !== value) root.style.setProperty("--font-preview", value)
+    }
+
+    function input(size: number) {
+      target = size
+      showSize(moved ? target : start)
+    }
+
+    function cancel() {
+      drag.current = null
+      if (session.pointerId !== null && slider.hasPointerCapture(session.pointerId)) slider.releasePointerCapture(session.pointerId)
+      cancelAnimationFrame(frame)
+      slider.value = String(window.yinyangAppearance?.read().size ?? current.size)
+      slider.step = "1"
+      root.style.removeProperty("--font-preview")
+      layout.restore()
+    }
+
+    function move(nextX: number) {
+      if (moved || Math.abs(nextX - clientX) < 3) return
+      moved = true
+      showSize(target)
+    }
+
+    function finish(commit: boolean) {
+      session.pointerId = null
+      const from = moved ? slider.valueAsNumber : start
+      const committed = commit ? (Math.round(target) as FontSize) : current.size
+      showSize(from)
+      if (commit) update({ size: committed })
+      if (from === committed) {
+        cancel()
+        return
+      }
+
+      const releasedAt = performance.now()
+
+      function settle(now: number) {
+        const progress = Math.max(0, (now - releasedAt) / 140)
+        if (progress >= 1) {
+          cancel()
+          return
+        }
+        const size = from + (committed - from) * (1 - (1 - progress) ** 2)
+        showSize(size)
+        frame = requestAnimationFrame(settle)
+      }
+
+      frame = requestAnimationFrame(settle)
+    }
+  }
+
+  function endSizeDrag({ pointerId, type }: PointerEvent<HTMLInputElement>) {
+    const session = drag.current
+    if (session?.pointerId === pointerId) session.finish(type === "pointerup")
+  }
 
   function switchMode(event: MouseEvent<HTMLButtonElement>) {
     const root = document.documentElement
@@ -115,7 +219,28 @@ export default function Appearance({ initial, palettes }: Props) {
         <ALargeSmall aria-hidden="true" />
       </IconButton>
       <div id="font-menu" className="appearance-menu font-menu" role="group" aria-label="字号" popover="auto" onToggle={focusMenu}>
-        <input type="range" min="14" max="18" step="1" aria-label="全站字号" value={current.size} onChange={(event) => update({ size: event.currentTarget.valueAsNumber as FontSize })} />
+        <input
+          ref={sliderRef}
+          type="range"
+          min="14"
+          max="18"
+          step="1"
+          aria-label="全站字号"
+          defaultValue={initial.size}
+          onPointerDown={startSizeDrag}
+          onPointerMove={({ pointerId, clientX }) => {
+            const session = drag.current
+            if (session?.pointerId === pointerId) session.move(clientX)
+          }}
+          onPointerUp={endSizeDrag}
+          onPointerCancel={endSizeDrag}
+          onLostPointerCapture={endSizeDrag}
+          onKeyDown={() => drag.current?.cancel()}
+          onInput={({ currentTarget }) => {
+            if (drag.current) drag.current.input(currentTarget.valueAsNumber)
+            else update({ size: currentTarget.valueAsNumber as FontSize })
+          }}
+        />
       </div>
     </div>
   )

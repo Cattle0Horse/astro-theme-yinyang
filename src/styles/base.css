@@ -58,15 +58,18 @@
   --prose-weight-regular: 400;
   --prose-weight-title: 500;
   --prose-weight-heading: 600;
-  --fs-title: 1.75rem;
-  --fs-h1: 1.625rem;
-  --fs-h2: 1.4375rem;
-  --fs-h3: 1.25rem;
-  --fs-h4: 1rem;
-  --fs-body: 0.9375rem;
-  --fs-note: 0.8125rem;
-  --fs-ui: 0.875rem;
-  --fs-meta: 0.75rem;
+  --font-size: 15;
+  --font-size-offset: calc(var(--font-preview, var(--font-size)) - 14);
+  --font-unit: 0.0625rem;
+  --fs-title: calc((26 + 2 * var(--font-size-offset)) * var(--font-unit));
+  --fs-h1: calc((24 + 2 * var(--font-size-offset)) * var(--font-unit));
+  --fs-h2: calc((22 + var(--font-size-offset) + clamp(0, var(--font-size-offset) - 2, 2)) * var(--font-unit));
+  --fs-h3: calc((18 + 2 * var(--font-size-offset) - clamp(0, var(--font-size-offset) - 1, 2)) * var(--font-unit));
+  --fs-h4: calc((15 + var(--font-size-offset) + max(0, var(--font-size-offset) - 3)) * var(--font-unit));
+  --fs-body: calc((14 + var(--font-size-offset)) * var(--font-unit));
+  --fs-note: calc((12 + var(--font-size-offset)) * var(--font-unit));
+  --fs-ui: calc((13 + var(--font-size-offset)) * var(--font-unit));
+  --fs-meta: calc((12 + max(0, var(--font-size-offset) - 1)) * var(--font-unit));
   --column: 800px;
   --code-bg: color-mix(in srgb, var(--accent) 3%, color-mix(in srgb, var(--ink) 3%, var(--paper)));
   --code-rule: color-mix(in srgb, var(--accent) 15%, var(--rule-light));
@@ -75,48 +78,16 @@
   --control-hover-shadow: 0 3px 10px #0003;
 }
 :root[data-font-size="14"] {
-  --fs-title: 1.625rem;
-  --fs-h1: 1.5rem;
-  --fs-h2: 1.375rem;
-  --fs-h3: 1.125rem;
-  --fs-h4: 0.9375rem;
-  --fs-body: 0.875rem;
-  --fs-note: 0.75rem;
-  --fs-ui: 0.8125rem;
-  --fs-meta: 0.75rem;
+  --font-size: 14;
 }
 :root[data-font-size="16"] {
-  --fs-title: 1.875rem;
-  --fs-h1: 1.75rem;
-  --fs-h2: 1.5rem;
-  --fs-h3: 1.3125rem;
-  --fs-h4: 1.0625rem;
-  --fs-body: 1rem;
-  --fs-note: 0.875rem;
-  --fs-ui: 0.9375rem;
-  --fs-meta: 0.8125rem;
+  --font-size: 16;
 }
 :root[data-font-size="17"] {
-  --fs-title: 2rem;
-  --fs-h1: 1.875rem;
-  --fs-h2: 1.625rem;
-  --fs-h3: 1.375rem;
-  --fs-h4: 1.125rem;
-  --fs-body: 1.0625rem;
-  --fs-note: 0.9375rem;
-  --fs-ui: 1rem;
-  --fs-meta: 0.875rem;
+  --font-size: 17;
 }
 :root[data-font-size="18"] {
-  --fs-title: 2.125rem;
-  --fs-h1: 2rem;
-  --fs-h2: 1.75rem;
-  --fs-h3: 1.5rem;
-  --fs-h4: 1.25rem;
-  --fs-body: 1.125rem;
-  --fs-note: 1rem;
-  --fs-ui: 1.0625rem;
-  --fs-meta: 0.9375rem;
+  --font-size: 18;
 }
 [data-swatch="indigo"] {
   --palette-color: var(--indigo);
