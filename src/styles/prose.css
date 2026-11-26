@@ -200,11 +200,6 @@
   opacity: 1;
   padding-inline-end: 1ch;
 }
-@media (prefers-reduced-motion: reduce) {
-  .reading pre .line::before {
-    transition: none;
-  }
-}
 .reading [data-code-block] {
   position: relative;
   margin-block: 16px;

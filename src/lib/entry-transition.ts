@@ -4,7 +4,6 @@ import { clearFootnoteFeedback } from "./footnote-feedback"
 import { closeHeaderMenu, openHeaderMenu } from "../components/header-menu"
 
 const partNames = ["title", "time"] as const
-const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)")
 const root = document.documentElement
 const interruptEvents = ["pointerdown", "click", "wheel", "touchmove", "keydown"] as const
 let pendingNavigation: { href: string } | undefined
@@ -218,7 +217,7 @@ document.addEventListener("astro:before-swap", (event) => {
       // Let the other swap handlers mark the shared elements before choosing what slides in.
       queueMicrotask(() => {
         if (listeners.signal.aborted) return
-        if (!to.hash && !reducedMotion.matches) animations = animateEntrance()
+        if (!to.hash) animations = animateEntrance()
         void Promise.allSettled([viewTransition.finished, ...animations.map((animation) => animation.finished)]).then(cleanup)
       })
     },
@@ -248,7 +247,7 @@ document.addEventListener("astro:before-preparation", (event) => {
     setNavigationLoading(true)
     try {
       await load()
-      if (supportsViewTransitions && !reducedMotion.matches && !signal.aborted && !preparation.defaultPrevented) {
+      if (supportsViewTransitions && !signal.aborted && !preparation.defaultPrevented) {
         prepareOutgoingContent(signal)
         if (!preparation.to.hash) prepareEntryTransition(preparation)
       }

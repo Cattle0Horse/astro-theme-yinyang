@@ -918,7 +918,7 @@ test("the theme reveal switches reading colors together and keeps the circular a
 
 test("cycles the single theme icon and shows a viewport-safe custom tooltip", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 700 })
-  await page.emulateMedia({ colorScheme: "light", reducedMotion: "no-preference" })
+  await page.emulateMedia({ colorScheme: "light" })
   await page.goto("/")
   const theme = page.getByRole("button", { name: /^明暗模式：/u })
   const tooltip = page.getByRole("tooltip")
@@ -976,7 +976,6 @@ test("code controls update in both directions and keep code visible", async ({ p
 })
 
 test("code wrapping preserves source blank lines and only adds rows for long lines", async ({ page }) => {
-  await page.emulateMedia({ reducedMotion: "reduce" })
   await page.setViewportSize({ width: 1000, height: 800 })
   await page.goto("/posts/syntax-highlighting-test/")
   const block = page

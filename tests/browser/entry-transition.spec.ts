@@ -20,6 +20,7 @@ test.beforeEach(async ({ page }) => {
 })
 
 test("Blog title and date are shared on opening an article and returning to its list", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" })
   await page.setViewportSize({ width: 1440, height: 900 })
   await page.goto("/")
   await page.getByRole("link", { name: "阅读与记录之间" }).click()

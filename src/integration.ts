@@ -1,4 +1,5 @@
 import type { AstroIntegration } from "astro"
+import { readFile } from "node:fs/promises"
 import { unified } from "@astrojs/markdown-remark"
 import react from "@astrojs/react"
 import tailwind from "@tailwindcss/vite"
@@ -49,7 +50,25 @@ export default function yinyang(options: ThemeOptions = {}): AstroIntegration[] 
             trailingSlash: command === "dev" || command === "preview" ? "ignore" : "always",
             build: { format: "directory" },
             vite: {
-              plugins: [tailwind()],
+              plugins: [
+                {
+                  name: "yinyang:astro-transition-styles",
+                  enforce: "pre",
+                  async transform(css, id) {
+                    if (!id.endsWith("/astro/components/viewtransitions.css")) return
+                    const forwarded = /^\s*@import "(@astrojs\/vite-plugin-astro\/components\/viewtransitions\.css)";\s*$/u.exec(css)
+                    if (forwarded) {
+                      const source = await this.resolve(forwarded[1], id)
+                      if (!source) return
+                      this.addWatchFile(source.id)
+                      css = await readFile(source.id, "utf8")
+                    }
+                    // Keep Astro's keyframes and drop its conditional animation reset.
+                    return css.replace(/@media\s*\(\s*prefers-reduced-motion\s*\)\s*\{(?:[^{}]|\{[^{}]*\})*\}/gu, "")
+                  }
+                },
+                tailwind()
+              ],
               define: { __YINYANG_OPTIONS__: JSON.stringify(options) }
             },
             markdown: {

@@ -159,7 +159,7 @@ export default function Appearance({ initial, palettes }: Props) {
   function switchMode(event: MouseEvent<HTMLButtonElement>) {
     const root = document.documentElement
     const resolved = nextMode.id === "system" ? (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light") : nextMode.id
-    if (!document.startViewTransition || root.dataset.theme === resolved || root.classList.contains("theme-revealing") || matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    if (!document.startViewTransition || root.dataset.theme === resolved || root.classList.contains("theme-revealing")) {
       update({ mode: nextMode.id })
       return
     }

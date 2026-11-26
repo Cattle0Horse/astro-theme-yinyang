@@ -11,7 +11,6 @@ export function animateCodeHeight(pre: HTMLElement, update: () => void, duration
     }
   }
   update()
-  if (matchMedia("(prefers-reduced-motion: reduce)").matches) return
   const nextHeight = pre.getBoundingClientRect().height
   const nextFoldMargin = fold ? getComputedStyle(fold).marginBlockStart : undefined
   if (height === nextHeight) return
