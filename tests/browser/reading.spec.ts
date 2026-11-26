@@ -5,6 +5,7 @@ const article = "/posts/reading/markdown/"
 async function recordAnnotationOutlines(page: Page) {
   await page.addInitScript(() => {
     const contours = new WeakMap<Path2D, { x: number; y: number }[]>()
+    const started = new WeakSet<Path2D>()
     const { arcTo } = Path2D.prototype
     const { stroke } = CanvasRenderingContext2D.prototype
     Path2D.prototype.arcTo = function (this: Path2D, x, y, x2, y2, radius) {
@@ -15,18 +16,24 @@ async function recordAnnotationOutlines(page: Page) {
     }
     CanvasRenderingContext2D.prototype.stroke = function (this: CanvasRenderingContext2D, path?: Path2D) {
       const points = path && contours.get(path)
-      if (points && this.canvas.hasAttribute("data-annotation-outline") && !this.getLineDash().length) {
-        const outlines = JSON.parse(this.canvas.dataset.closedOutlines ?? "[]") as { x: number; y: number }[][]
-        if (!outlines.some((outline) => JSON.stringify(outline) === JSON.stringify(points))) {
-          this.canvas.dataset.closedOutlines = JSON.stringify([...outlines, points])
+      if (path && points && this.canvas.hasAttribute("data-annotation-outline")) {
+        if (!started.has(path)) {
+          started.add(path)
+          this.canvas.dataset.outlinesStarted = String(Number(this.canvas.dataset.outlinesStarted ?? 0) + 1)
+        }
+        if (!this.getLineDash().length) {
+          const outlines = JSON.parse(this.canvas.dataset.closedOutlines ?? "[]") as { x: number; y: number }[][]
+          if (!outlines.some((outline) => JSON.stringify(outline) === JSON.stringify(points))) {
+            this.canvas.dataset.closedOutlines = JSON.stringify([...outlines, points])
+          }
         }
       }
       Reflect.apply(stroke, this, path ? [path] : [])
     }
   })
   const canvas = page.locator("canvas[data-annotation-outline]")
-  return async (count: number) => {
-    const closed = () => canvas.evaluate((element) => JSON.parse((element as HTMLElement).dataset.closedOutlines ?? "[]") as { x: number; y: number }[][])
+  return async (count: number, matches: (outline: { x: number; y: number }[]) => boolean = () => true) => {
+    const closed = async () => (await canvas.evaluate((element) => JSON.parse((element as HTMLElement).dataset.closedOutlines ?? "[]") as { x: number; y: number }[][])).filter(matches)
     await expect.poll(async () => (await closed()).length).toBe(count)
     return closed()
   }
@@ -903,6 +910,7 @@ test("footnotes highlight the entry and return to the annotated clause", async (
   const [footnote] = await outlines(1)
   const backlink = await note.getByRole("link", { name: "返回引用处" }).boundingBox()
   expect(Math.max(...footnote.map(({ x }) => x))).toBeLessThan(backlink!.x)
+  await expect(page.locator("canvas[data-annotation-outline]")).toHaveCount(0)
   await expectEasedReadingJump(note.getByRole("link", { name: "返回引用处" }))
   await expect(page).toHaveURL(/#user-content-fnref-2$/u)
   const [outline] = await outlines(1)
@@ -935,6 +943,8 @@ test("a wrapped footnote return traces one contour around the complete phrase", 
   await page.getByRole("link", { name: "查看脚注 1" }).click()
   const note = page.locator("#user-content-fn-1")
   await expect(note).toBeInViewport()
+  await outlines(1)
+  await expect(page.locator("canvas[data-annotation-outline]")).toHaveCount(0)
   await note.getByRole("link", { name: "返回引用处" }).click()
   await expect(page).toHaveURL(/#user-content-fnref-1$/u)
   const [outline] = await outlines(1)
@@ -979,10 +989,33 @@ test("sidenote outlines only mark the destination in both directions", async ({ 
   await expect(card).not.toHaveCSS("border-inline-start-color", "rgba(0, 0, 0, 0)")
   await expect(card.getByText("返回原文")).toHaveCount(0)
   await card.press("Enter")
-  const [text] = await outlines(1)
+  const [text] = await outlines(1, (points) => points.every(({ x }) => x < railLeft))
   expect(text.every(({ x }) => x < railLeft)).toBe(true)
   await expect(card).not.toHaveCSS("border-inline-start-color", "rgba(0, 0, 0, 0)")
   await expect(overlap).toBeFocused()
+})
+
+test("sidenote outlines keep playing across repeated clicks and new targets", async ({ page }) => {
+  const outlines = await recordAnnotationOutlines(page)
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.goto(article)
+  const canvas = page.locator("canvas[data-annotation-outline]")
+  const first = page.getByRole("button", { name: "阅读", exact: true })
+  const overlap = page.getByRole("button", { name: "记录", exact: true })
+  await first.click()
+  await expect(canvas).toHaveAttribute("data-outlines-started", "1")
+  const playback = (await canvas.elementHandle())!
+  await overlap.click()
+  await expect(canvas).toHaveAttribute("data-outlines-started", "2")
+  await overlap.click()
+  await first.click()
+  await outlines(2)
+  await expect(canvas).toHaveAttribute("data-outlines-started", "2")
+  expect(await playback.evaluate((element) => element.isConnected)).toBe(true)
+  await expect(canvas).toHaveCount(0)
+  await overlap.click()
+  await expect(canvas).toHaveAttribute("data-outlines-started", "2")
+  await outlines(2)
 })
 
 test("the header stays in place when navigation adds a document scrollbar", async ({ page }) => {

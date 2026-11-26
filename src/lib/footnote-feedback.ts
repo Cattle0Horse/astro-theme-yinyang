@@ -1,11 +1,10 @@
 import { annotationTextRects } from "./annotation-contour"
-import { clearAnnotationFeedback, playAnnotationOutline } from "./annotation-outline"
+import { isAnnotationOutlinePlaying, playAnnotationOutline } from "./annotation-outline"
 import { scrollToReadingTarget } from "./reading-scroll"
 import type { SidenoteReveal } from "./sidenotes-reader"
 
 const links = "a[data-footnote-ref], a[data-footnote-backref]"
 let current: HTMLElement | undefined
-let clear: (() => void) | undefined
 let frame = 0
 
 function targetFor(hash: string) {
@@ -35,13 +34,10 @@ function textRange(target: HTMLElement) {
 
 export function clearFootnoteFeedback() {
   cancelAnimationFrame(frame)
-  clear?.()
-  clear = undefined
   current = undefined
 }
 
 function prepareTarget(target: HTMLElement) {
-  clearAnnotationFeedback()
   clearFootnoteFeedback()
   current = target
   if (target.hasAttribute("data-footnote-ref")) {
@@ -59,7 +55,9 @@ function prepareTarget(target: HTMLElement) {
 function highlight(target: HTMLElement) {
   if (current !== target || !target.isConnected) return
   const range = textRange(target)
-  if (range) clear = playAnnotationOutline([annotationTextRects(range)], "text", target.closest<HTMLDialogElement>("dialog[data-sidenote-dialog][open]"))
+  if (range) {
+    playAnnotationOutline([{ target, rects: annotationTextRects(range) }], "text", target.closest<HTMLDialogElement>("dialog[data-sidenote-dialog][open]"))
+  }
 }
 
 function highlightCurrentFragment() {
@@ -82,11 +80,12 @@ document.addEventListener(
     if (!link || !link.getAttribute("href")?.startsWith("#") || link.hasAttribute("download") || (link.target && link.target.toLowerCase() !== "_self")) return
     const target = targetFor(link.hash)
     if (!target) return
+    const alreadyPlaying = isAnnotationOutlinePlaying(target)
     link.dispatchEvent(new Event("sidenote:suspend", { bubbles: true }))
     const request = prepareTarget(target)
     scrollToReadingTarget(event, link, target, request?.open ? (request.position ?? scrollY) : "center", () => {
       request?.open?.()
-      highlight(target)
+      if (!alreadyPlaying) highlight(target)
     })
   },
   { capture: true }

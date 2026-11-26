@@ -53,8 +53,8 @@ export function enhanceSidenotes(article: HTMLElement) {
   const rail = new Map<string, { section: HTMLElement; source: HTMLElement | undefined }>()
   const cards = "[data-sidenote-card], details[data-sidenote][open]"
 
-  function outline(kind: SidenoteOutline["kind"], targets: HTMLElement[]) {
-    article.dispatchEvent(new CustomEvent<SidenoteOutline>("sidenote:outline", { bubbles: true, detail: { kind, targets } }))
+  function outline(kind: SidenoteOutline["kind"], targets: HTMLElement[], source?: HTMLElement) {
+    article.dispatchEvent(new CustomEvent<SidenoteOutline>("sidenote:outline", { bubbles: true, detail: { kind, targets, source } }))
   }
 
   function locateOriginal(card: HTMLElement, focus: boolean) {
@@ -63,7 +63,8 @@ export function enhanceSidenotes(article: HTMLElement) {
     if (focus) controls.find((control) => idsFor(control).includes(id))?.focus({ preventScroll: true })
     outline(
       "text",
-      segments.filter((segment) => idsFor(segment).includes(id))
+      segments.filter((segment) => idsFor(segment).includes(id)),
+      card
     )
   }
 

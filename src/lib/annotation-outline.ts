@@ -4,10 +4,28 @@ import { scrollToReadingPosition } from "./reading-scroll"
 export interface SidenoteOutline {
   kind: "text" | "blocks"
   targets: HTMLElement[]
+  source?: HTMLElement
 }
 
-let clearOutline: (() => void) | undefined
-let pendingSidenote = 0
+interface OutlineGroup {
+  target: HTMLElement
+  rects: readonly OutlineRect[]
+  key?: symbol
+}
+
+interface PlayingOutline {
+  target: HTMLElement
+  path: Path2D
+  length: number
+  pace: ReturnType<typeof outlinePace>
+  duration: number
+  startedAt?: number
+  closedAt?: number
+}
+
+const layers = new Map<HTMLElement, { paths: Map<HTMLElement | symbol, PlayingOutline>; stop: () => void }>()
+const returnKeys = new WeakMap<HTMLElement, symbol>()
+const pendingSidenotes = new Set<number>()
 let cancelSidenoteScroll: (() => void) | undefined
 
 function outlinePace(length: number, turns: number[]) {
@@ -40,22 +58,32 @@ function distanceAt(pace: ReturnType<typeof outlinePace>, time: number) {
   return (left + part) * pace.step
 }
 
-export function playAnnotationOutline(groups: readonly (readonly OutlineRect[])[], kind: "text" | "blocks" | "rail", dialog?: HTMLDialogElement | null) {
-  clearOutline?.()
+export function isAnnotationOutlinePlaying(key: HTMLElement | symbol) {
+  for (const { paths } of layers.values()) {
+    if (paths.has(key)) return true
+  }
+  return false
+}
+
+export function playAnnotationOutline(groups: readonly OutlineGroup[], kind: "text" | "blocks" | "rail", dialog?: HTMLDialogElement | null) {
+  const fresh = groups.filter(({ target, key, rects }) => target.isConnected && rects.length && !isAnnotationOutlinePlaying(key ?? target))
+  if (!fresh.length) return
+  const host = dialog ?? document.body
+  const layer = layers.get(host) ?? createOutlineLayer(host, dialog)
+  if (!layer) return
   const x = dialog ? 0 : scrollX
   const y = dialog ? 0 : scrollY
   const padding = kind === "rail" ? 0 : kind === "text" ? 3 : 4
   const radius = kind === "rail" ? 0 : kind === "text" ? 5 : 7
-  const paths = groups
-    .filter((rects) => rects.length)
-    .map((rects) => {
-      const documentRects = rects.map(({ left, top, right, bottom }) => ({ left: left + x, right: right + x, top: top + y, bottom: bottom + y }))
-      const { path, length, turns } = createAnnotationContour(documentRects, padding, radius)
-      const pace = outlinePace(length, turns)
-      return { path, length, pace, duration: Math.min(1000, Math.max(285, 155 + pace.travel * 0.76)), closedAt: undefined as number | undefined }
-    })
-  if (!paths.length) return
+  for (const { target, key, rects } of fresh) {
+    const documentRects = rects.map(({ left, top, right, bottom }) => ({ left: left + x, right: right + x, top: top + y, bottom: bottom + y }))
+    const { path, length, turns } = createAnnotationContour(documentRects, padding, radius)
+    const pace = outlinePace(length, turns)
+    layer.paths.set(key ?? target, { target, path, length, pace, duration: Math.min(1000, Math.max(285, 155 + pace.travel * 0.76)) })
+  }
+}
 
+function createOutlineLayer(host: HTMLElement, dialog?: HTMLDialogElement | null) {
   const canvas = document.createElement("canvas")
   const context = canvas.getContext("2d")
   if (!context) return
@@ -71,33 +99,33 @@ export function playAnnotationOutline(groups: readonly (readonly OutlineRect[])[
   surface.lineCap = "round"
   surface.lineJoin = "round"
   surface.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue("--accent").trim()
-  const host = dialog ?? document.body
   host.append(canvas)
   const controller = new AbortController()
+  const paths = new Map<HTMLElement | symbol, PlayingOutline>()
   let frame = requestAnimationFrame(animate)
-  let start: number | undefined
 
   function stop() {
     if (controller.signal.aborted) return
     cancelAnimationFrame(frame)
     controller.abort()
     canvas.remove()
-    if (clearOutline === stop) clearOutline = undefined
+    layers.delete(host)
   }
 
   function animate(now: number) {
-    start ??= now
     surface.resetTransform()
     surface.clearRect(0, 0, canvas.width, canvas.height)
     surface.setTransform(scale, 0, 0, scale, dialog ? 0 : -scrollX * scale, dialog ? 0 : -scrollY * scale)
-    let running = false
-    for (const outline of paths) {
-      const { path, length, pace, duration } = outline
-      const drawing = (now - start) / duration
+    for (const [key, outline] of paths) {
+      const { target, path, length, pace, duration } = outline
+      outline.startedAt ??= now
+      const drawing = (now - outline.startedAt) / duration
       if (drawing >= 1) outline.closedAt ??= now
       const erasing = Math.max(0, (now - (outline.closedAt ?? now) - 140) / (duration * 0.88))
-      if (erasing >= 1) continue
-      running = true
+      if (!target.isConnected || target.hidden || erasing >= 1) {
+        paths.delete(key)
+        continue
+      }
       if (drawing < 1) {
         surface.setLineDash([Math.max(0.01, distanceAt(pace, drawing)), length + 1])
         surface.lineDashOffset = 0
@@ -110,55 +138,66 @@ export function playAnnotationOutline(groups: readonly (readonly OutlineRect[])[
       }
       surface.stroke(path)
     }
-    if (running) frame = requestAnimationFrame(animate)
+    if (paths.size) frame = requestAnimationFrame(animate)
     else stop()
   }
 
   window.addEventListener("resize", stop, { signal: controller.signal })
   dialog?.addEventListener("close", stop, { signal: controller.signal })
-  if (dialog && kind === "text") dialog.addEventListener("scroll", stop, { capture: true, signal: controller.signal })
-  clearOutline = stop
-  return stop
+  if (dialog) dialog.addEventListener("scroll", stop, { capture: true, signal: controller.signal })
+  const layer = { paths, stop }
+  layers.set(host, layer)
+  return layer
 }
 
-export function clearAnnotationFeedback() {
-  cancelAnimationFrame(pendingSidenote)
+function clearPendingSidenotes() {
+  for (const frame of pendingSidenotes) cancelAnimationFrame(frame)
+  pendingSidenotes.clear()
   cancelSidenoteScroll?.()
   cancelSidenoteScroll = undefined
-  clearOutline?.()
 }
 
 document.addEventListener("sidenote:outline", (event) => {
-  const { kind, targets } = (event as CustomEvent<SidenoteOutline>).detail
-  clearAnnotationFeedback()
-  if (!targets.length) return
-  pendingSidenote = requestAnimationFrame(() => {
-    if (!targets.every((target) => target.isConnected)) return
-    const first = targets[0]
+  const { kind, source, targets } = (event as CustomEvent<SidenoteOutline>).detail
+  if (!targets.length) {
+    clearPendingSidenotes()
+    return
+  }
+  let key = source && returnKeys.get(source)
+  if (source && !key) {
+    key = Symbol()
+    returnKeys.set(source, key)
+  }
+  const fresh = kind === "blocks" ? targets.filter((target) => !isAnnotationOutlinePlaying(target)) : targets
+  if (!fresh.length || (kind === "text" && isAnnotationOutlinePlaying(key ?? fresh[0]))) return
+  const frame = requestAnimationFrame(() => {
+    pendingSidenotes.delete(frame)
+    if (!fresh.every((target) => target.isConnected)) return
+    const first = fresh[0]
     const dialog = first.closest<HTMLDialogElement>("dialog[data-sidenote-dialog][open]")
     const draw = () => {
       if (kind === "blocks") {
         const sharesRail = first.hasAttribute("data-sidenote-card")
-        const blocks = targets.flatMap((target) => {
+        const blocks = fresh.flatMap((target) => {
           const { left, right, top, bottom, width, height } = target.getBoundingClientRect()
           if (!width || !height) return []
-          if (!sharesRail) return [[{ left, right, top, bottom }]]
+          if (!sharesRail) return [{ target, rects: [{ left, right, top, bottom }] }]
           const style = getComputedStyle(target)
           const halfRail = parseFloat(style.borderInlineStartWidth) / 2
           // The contour follows the center of the existing border.
           if (style.direction === "rtl") {
-            return [[{ left: left - 1, right: right - halfRail, top, bottom }]]
+            return [{ target, rects: [{ left: left - 1, right: right - halfRail, top, bottom }] }]
           }
-          return [[{ left: left + halfRail, right: right + 1, top, bottom }]]
+          return [{ target, rects: [{ left: left + halfRail, right: right + 1, top, bottom }] }]
         })
         playAnnotationOutline(blocks, sharesRail ? "rail" : "blocks", dialog)
       } else {
-        const rects = targets.flatMap((target) => {
+        const rects = fresh.flatMap((target) => {
           const range = document.createRange()
           range.selectNodeContents(target)
           return annotationTextRects(range)
         })
-        playAnnotationOutline([rects], "text", dialog)
+        playAnnotationOutline([{ target: first, key, rects }], "text", dialog)
       }
     }
     if (dialog) {
@@ -172,6 +211,10 @@ document.addEventListener("sidenote:outline", (event) => {
       cancelSidenoteScroll = scrollToReadingPosition(first, "center", draw)
     } else draw()
   })
+  pendingSidenotes.add(frame)
 })
 
-document.addEventListener("astro:before-swap", clearAnnotationFeedback)
+document.addEventListener("astro:before-swap", () => {
+  clearPendingSidenotes()
+  for (const layer of layers.values()) layer.stop()
+})
