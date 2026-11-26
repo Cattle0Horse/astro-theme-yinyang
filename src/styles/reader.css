@@ -335,12 +335,22 @@
   font: var(--fs-note)/1.65 var(--prose-font);
 }
 .reading [data-sidenote-panel] > section {
-  padding-inline-start: 10px;
-  border-inline-start: 1px solid var(--rule);
+  --sidenote-corner-radius: 7px;
+  --sidenote-rail-width: 1px;
+  padding-inline-start: calc(10px + var(--sidenote-rail-width));
   color: var(--prose-ink);
 }
-.reading [data-sidenote-panel] > section[data-selected] {
-  border-color: var(--accent);
+.reading [data-sidenote-panel] > section::before {
+  content: "";
+  position: absolute;
+  inset-block: var(--sidenote-corner-radius);
+  inset-inline-start: 0;
+  inline-size: var(--sidenote-rail-width);
+  background-color: var(--rule);
+  pointer-events: none;
+}
+.reading [data-sidenote-panel] > section[data-selected]::before {
+  background-color: var(--accent);
 }
 .reading :is([data-sidenote-card], [data-sidenote][open]) {
   cursor: pointer;

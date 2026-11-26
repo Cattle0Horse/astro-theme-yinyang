@@ -11,6 +11,7 @@ interface OutlineGroup {
   target: HTMLElement
   rects: readonly OutlineRect[]
   key?: symbol
+  radius?: number
 }
 
 interface PlayingOutline {
@@ -74,8 +75,7 @@ export function playAnnotationOutline(groups: readonly OutlineGroup[], kind: "te
   const x = dialog ? 0 : scrollX
   const y = dialog ? 0 : scrollY
   const padding = kind === "rail" ? 0 : kind === "text" ? 3 : 4
-  const radius = kind === "rail" ? 0 : kind === "text" ? 5 : 7
-  for (const { target, key, rects } of fresh) {
+  for (const { target, key, rects, radius = kind === "text" ? 5 : 7 } of fresh) {
     const documentRects = rects.map(({ left, top, right, bottom }) => ({ left: left + x, right: right + x, top: top + y, bottom: bottom + y }))
     const { path, length, turns } = createAnnotationContour(documentRects, padding, radius)
     const pace = outlinePace(length, turns)
@@ -188,12 +188,13 @@ document.addEventListener("sidenote:outline", (event) => {
           if (!width || !height) return []
           if (!sharesRail) return [{ target, rects: [{ left, right, top, bottom }] }]
           const style = getComputedStyle(target)
-          const halfRail = parseFloat(style.borderInlineStartWidth) / 2
-          // The contour follows the center of the existing border.
+          const halfRail = parseFloat(style.getPropertyValue("--sidenote-rail-width")) / 2
+          const radius = parseFloat(style.getPropertyValue("--sidenote-corner-radius"))
+          // The straight segment meets the shortened rail at both tangents.
           if (style.direction === "rtl") {
-            return [{ target, rects: [{ left: left - 1, right: right - halfRail, top, bottom }] }]
+            return [{ target, radius, rects: [{ left: left - 1, right: right - halfRail, top, bottom }] }]
           }
-          return [{ target, rects: [{ left: left + halfRail, right: right + 1, top, bottom }] }]
+          return [{ target, radius, rects: [{ left: left + halfRail, right: right + 1, top, bottom }] }]
         })
         playAnnotationOutline(blocks, sharesRail ? "rail" : "blocks", dialog)
       } else {

@@ -2,16 +2,22 @@ import { expect, test, type Locator, type Page } from "@playwright/test"
 
 const article = "/posts/reading/markdown/"
 
+interface RecordedOutlinePoint {
+  x: number
+  y: number
+  radius: number
+}
+
 async function recordAnnotationOutlines(page: Page) {
   await page.addInitScript(() => {
-    const contours = new WeakMap<Path2D, { x: number; y: number }[]>()
+    const contours = new WeakMap<Path2D, RecordedOutlinePoint[]>()
     const started = new WeakSet<Path2D>()
     const closed = new WeakSet<Path2D>()
     const { arcTo } = Path2D.prototype
     const { stroke } = CanvasRenderingContext2D.prototype
     Path2D.prototype.arcTo = function (this: Path2D, x, y, x2, y2, radius) {
       const points = contours.get(this) ?? []
-      points.push({ x, y })
+      points.push({ x, y, radius })
       contours.set(this, points)
       arcTo.call(this, x, y, x2, y2, radius)
     }
@@ -26,11 +32,12 @@ async function recordAnnotationOutlines(page: Page) {
           closed.add(path)
           const { left, top, width, height } = this.canvas.getBoundingClientRect()
           const transform = this.getTransform()
-          const rendered = points.map(({ x, y }) => ({
+          const rendered = points.map(({ x, y, radius }) => ({
             x: left + scrollX + ((x * transform.a + transform.e) * width) / this.canvas.width,
-            y: top + scrollY + ((y * transform.d + transform.f) * height) / this.canvas.height
+            y: top + scrollY + ((y * transform.d + transform.f) * height) / this.canvas.height,
+            radius: (radius * transform.d * height) / this.canvas.height
           }))
-          const outlines = JSON.parse(this.canvas.dataset.closedOutlines ?? "[]") as { x: number; y: number }[][]
+          const outlines = JSON.parse(this.canvas.dataset.closedOutlines ?? "[]") as RecordedOutlinePoint[][]
           this.canvas.dataset.closedOutlines = JSON.stringify([...outlines, rendered])
         }
       }
@@ -38,8 +45,8 @@ async function recordAnnotationOutlines(page: Page) {
     }
   })
   const canvas = page.locator("canvas[data-annotation-outline]")
-  return async (count: number, matches: (outline: { x: number; y: number }[]) => boolean = () => true) => {
-    const closed = async () => (await canvas.evaluate((element) => JSON.parse((element as HTMLElement).dataset.closedOutlines ?? "[]") as { x: number; y: number }[][])).filter(matches)
+  return async (count: number, matches: (outline: RecordedOutlinePoint[]) => boolean = () => true) => {
+    const closed = async () => (await canvas.evaluate((element) => JSON.parse((element as HTMLElement).dataset.closedOutlines ?? "[]") as RecordedOutlinePoint[][])).filter(matches)
     await expect.poll(async () => (await closed()).length).toBe(count)
     return closed()
   }
@@ -973,32 +980,40 @@ test("sidenote outlines only mark the destination in both directions", async ({ 
   const panel = page.getByRole("complementary", { name: "旁注" })
   const overlap = page.getByRole("button", { name: "记录", exact: true }).and(page.locator('[data-sidenote-refs="1 2"]'))
   const card = panel.getByRole("region", { name: "旁注 2" })
-  await expect(card).not.toHaveCSS("border-inline-start-color", "rgba(0, 0, 0, 0)")
+  const railColor = () => card.evaluate((element) => getComputedStyle(element, "::before").backgroundColor)
+  expect(await railColor()).not.toBe("rgba(0, 0, 0, 0)")
   await overlap.click()
   const cards = await outlines(2)
   const railLeft = (await panel.boundingBox())!.x
   const rails = await panel.getByRole("region").evaluateAll((notes) =>
     notes.map((note) => {
       const { left, top, bottom } = note.getBoundingClientRect()
-      const style = getComputedStyle(note)
-      return { x: left + scrollX + parseFloat(style.borderInlineStartWidth) / 2, top: top + scrollY, bottom: bottom + scrollY, color: style.borderInlineStartColor }
+      const style = getComputedStyle(note, "::before")
+      return {
+        x: left + scrollX + parseFloat(style.inlineSize) / 2,
+        top: top + scrollY + parseFloat(style.insetBlockStart),
+        bottom: bottom + scrollY - parseFloat(style.insetBlockEnd),
+        color: style.backgroundColor
+      }
     })
   )
   for (const rail of rails) {
     expect(rail.color).not.toBe("rgba(0, 0, 0, 0)")
-    const cornerAligned = (x: number, y: number, edge: number) => Math.abs(x - rail.x) < 0.25 && Math.abs(y - edge) < 0.25
-    expect(cards.some((points) => points.some(({ x, y }) => cornerAligned(x, y, rail.top)) && points.some(({ x, y }) => cornerAligned(x, y, rail.bottom)))).toBe(true)
+    const sharesRail = ({ x, radius }: RecordedOutlinePoint) => Math.abs(x - rail.x) < 0.25 && radius > 0
+    const connectsTop = (point: RecordedOutlinePoint) => sharesRail(point) && Math.abs(point.y + point.radius - rail.top) < 0.25
+    const connectsBottom = (point: RecordedOutlinePoint) => sharesRail(point) && Math.abs(point.y - point.radius - rail.bottom) < 0.25
+    expect(cards.some((points) => points.some(connectsTop) && points.some(connectsBottom))).toBe(true)
   }
   await expect(page.locator("canvas[data-annotation-outline]")).toHaveCount(0)
-  await expect(card).not.toHaveCSS("border-inline-start-color", "rgba(0, 0, 0, 0)")
+  expect(await railColor()).not.toBe("rgba(0, 0, 0, 0)")
   await overlap.click()
   await expect(page.locator("canvas[data-annotation-outline]")).toBeVisible()
-  await expect(card).not.toHaveCSS("border-inline-start-color", "rgba(0, 0, 0, 0)")
+  expect(await railColor()).not.toBe("rgba(0, 0, 0, 0)")
   await expect(card.getByText("返回原文")).toHaveCount(0)
   await card.press("Enter")
   const [text] = await outlines(1, (points) => points.every(({ x }) => x < railLeft))
   expect(text.every(({ x }) => x < railLeft)).toBe(true)
-  await expect(card).not.toHaveCSS("border-inline-start-color", "rgba(0, 0, 0, 0)")
+  expect(await railColor()).not.toBe("rgba(0, 0, 0, 0)")
   await expect(overlap).toBeFocused()
 })
 
