@@ -90,8 +90,8 @@
   text-align: center;
   cursor: pointer;
   transition:
-    background-color 160ms ease,
-    color 160ms ease;
+    background-color var(--theme-color-transition-duration, 160ms) ease,
+    color var(--theme-color-transition-duration, 160ms) ease;
 }
 .loading-failed:not([aria-disabled="true"]):is(:hover, :focus-visible) {
   background: color-mix(in srgb, var(--accent) 12%, var(--paper));

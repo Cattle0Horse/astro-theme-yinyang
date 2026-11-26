@@ -33,7 +33,7 @@
   padding-inline-start: calc(var(--toc-link-inset) + var(--toc-indent) * var(--toc-level, 0));
   border-radius: 4px;
   overflow-wrap: anywhere;
-  transition: color 180ms ease;
+  transition: color var(--theme-color-transition-duration, 180ms) ease;
 }
 .toc-links a:hover,
 .toc-links a[aria-current="location"] {

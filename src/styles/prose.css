@@ -149,7 +149,7 @@
   border-radius: 10px;
   font: var(--fs-ui)/1.6 var(--code-font);
   background-color: var(--code-bg) !important;
-  transition: background-color 300ms ease;
+  transition: background-color var(--theme-color-transition-duration, 300ms) ease;
 }
 .reading pre code {
   font-size: inherit;

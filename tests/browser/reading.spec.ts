@@ -774,6 +774,40 @@ test("serves the original asset and lets a no-script reader open a sidenote", as
   }
 })
 
+test("the theme reveal switches reading colors together and keeps the circular animation", async ({ page }) => {
+  await page.emulateMedia({ colorScheme: "light" })
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.goto("/posts/syntax-highlighting-test/")
+  const button = page.getByRole("button", { name: /明暗模式/u })
+  await button.press("Enter")
+  await expect(page.locator("html")).toHaveAttribute("data-theme-mode", "light")
+  const result = await button.evaluate(async (element) => {
+    if (!(element instanceof HTMLButtonElement)) throw new Error("Expected the theme button")
+    const code = document.querySelector(".reading pre")!
+    const prior = getComputedStyle(code).backgroundColor
+    element.click()
+    const deadline = performance.now() + 1500
+    while (performance.now() < deadline) {
+      await new Promise(requestAnimationFrame)
+      const animations = document.getAnimations()
+      const reveal = animations.find((animation) => {
+        const effect = animation.effect
+        return effect instanceof KeyframeEffect && effect.pseudoElement === "::view-transition-new(root)" && effect.getKeyframes().some((frame) => frame.clipPath)
+      })
+      if (!reveal) continue
+      const paintTransitions = animations.filter((animation) => {
+        const target = animation.effect instanceof KeyframeEffect ? animation.effect.target : null
+        return animation instanceof CSSTransition && /^(color|background-color)$/u.test(animation.transitionProperty) && Boolean(target?.closest(".reading, .toc-desktop"))
+      })
+      return { colorChanged: getComputedStyle(code).backgroundColor !== prior, paintTransitions: paintTransitions.length }
+    }
+    throw new Error("Theme reveal did not start")
+  })
+  expect(result).toEqual({ colorChanged: true, paintTransitions: 0 })
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark")
+  await expect(page.locator(".reading pre").first()).toHaveCSS("transition-duration", "0.3s")
+})
+
 test("cycles the single theme icon and shows a viewport-safe custom tooltip", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 700 })
   await page.emulateMedia({ colorScheme: "light", reducedMotion: "no-preference" })

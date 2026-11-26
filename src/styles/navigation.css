@@ -134,6 +134,8 @@
 }
 :root.theme-revealing {
   view-transition-name: root;
+  /* The circular reveal transitions the colors of the whole page together. */
+  --theme-color-transition-duration: 0ms;
 }
 :root.theme-revealing :is(#main, .navigation-loading) {
   view-transition-name: none;
@@ -154,4 +156,5 @@
 }
 :root.theme-revealing::view-transition-new(root) {
   z-index: 2;
+  will-change: clip-path;
 }

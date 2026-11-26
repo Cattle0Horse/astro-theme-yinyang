@@ -63,9 +63,12 @@ export default function Appearance({ initial, palettes }: Props) {
       update({ mode: nextMode.id })
       return
     }
-    const bounds = event.currentTarget.getBoundingClientRect()
-    const x = event.detail ? event.clientX : bounds.x + bounds.width / 2
-    const y = event.detail ? event.clientY : bounds.y + bounds.height / 2
+    let { clientX: x, clientY: y } = event
+    if (!event.detail) {
+      const bounds = event.currentTarget.getBoundingClientRect()
+      x = bounds.x + bounds.width / 2
+      y = bounds.y + bounds.height / 2
+    }
     const radius = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y))
     root.classList.add("theme-revealing")
     const transition = document.startViewTransition(() => {

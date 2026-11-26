@@ -256,7 +256,7 @@ a {
     100% 1px;
   -webkit-box-decoration-break: clone;
   box-decoration-break: clone;
-  transition: color 180ms ease;
+  transition: color var(--theme-color-transition-duration, 180ms) ease;
 
   &[data-underline-visible],
   :root:not([data-js]) &:is(:hover, :focus-visible) {
