@@ -4,7 +4,7 @@
 
 ## 创建自己的站点
 
-主题通过 GitHub 版本标签分发。用 Astro CLI 以已发布的 GitHub 版本标签从 `starter/` 创建项目。模板使用 `^0.1.0` 的 Git SemVer 范围，后续运行 `pnpm update astro-theme-yinyang` 会选择最新兼容标签。
+使用已发布的 GitHub 版本标签从 `starter/` 创建站点。下面以 `v0.1.0` 为例。
 
 ```sh
 pnpm create astro@latest my-blog --template Cattle0Horse/blog-theme/starter#v0.1.0
@@ -33,11 +33,9 @@ pnpm dev
 - Notes 放在 `src/content/notes/YYYY-MM/NNN.md`。填写 `date`，标题可省略，标签使用 `note_tags`。来源可写在 `source`。
 - 附件放在内容目录内，通过相对路径引用。草稿将 `draft` 设为 `true`。
 
-正文使用普通 Markdown。公式、脚注、代码和旁注可参考[示例文章](src/content/posts/reading/markdown/index.md)。
+正文使用普通 Markdown。旁注用编号注释标记正文选区，并用独立注释写补充内容。完整写法见[阅读示例](src/content/posts/reading/markdown/index.md)。演示站也包含[表格](src/content/posts/markdown-table-demo/index.md)、[代码高亮](src/content/posts/syntax-highlighting-test/index.md)、[公式](src/content/posts/math-demo/index.md)、[脚注](src/content/posts/footnote-highlight-demo/index.md)和[图片加载失败](src/content/posts/test-image-fail/index.md)的示例。
 
 互动 404 从已启用的场景中按设备随机选择。可在 [site.config.ts](src/site.config.ts) 的 `notFound.available` 中配置场景，留空启用全部十款。桌面专属场景为 `flashlight`、`constellation` 和 `terminal`。本地可打开 `/404.html?scene=cat` 体验已启用的指定场景。
-
-演示站也包含[表格](src/content/posts/markdown-table-demo/index.md)、[代码高亮](src/content/posts/syntax-highlighting-test/index.md)、[公式](src/content/posts/math-demo/index.md)、[脚注](src/content/posts/footnote-highlight-demo/index.md)、[旁注](src/content/posts/sidenote-demo/index.md)和[图片请求失败](src/content/posts/test-image-fail/index.md)场景。来源示例的 Markdown 与附件随仓库保存。
 
 ## 构建与检查
 
