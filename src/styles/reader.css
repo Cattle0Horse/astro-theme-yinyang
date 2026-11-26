@@ -342,6 +342,9 @@
 .reading [data-sidenote-panel] > section[data-selected] {
   border-color: var(--accent);
 }
+.reading [data-sidenote-panel] > section[data-outline-active] {
+  border-inline-start-color: transparent;
+}
 .reading :is([data-sidenote-card], [data-sidenote][open]) {
   cursor: pointer;
 }

@@ -6,6 +6,11 @@ export interface SidenoteOutline {
   targets: HTMLElement[]
 }
 
+interface OutlineOptions {
+  dialog?: HTMLDialogElement | null
+  onStop?: () => void
+}
+
 let clearOutline: (() => void) | undefined
 let pendingSidenote = 0
 let cancelSidenoteScroll: (() => void) | undefined
@@ -40,7 +45,7 @@ function distanceAt(pace: ReturnType<typeof outlinePace>, time: number) {
   return (left + part) * pace.step
 }
 
-export function playAnnotationOutline(groups: readonly (readonly OutlineRect[])[], kind: "text" | "blocks" = "text", dialog?: HTMLDialogElement | null) {
+export function playAnnotationOutline(groups: readonly (readonly OutlineRect[])[], kind: "text" | "blocks", { dialog, onStop }: OutlineOptions = {}) {
   clearOutline?.()
   const x = dialog ? 0 : scrollX
   const y = dialog ? 0 : scrollY
@@ -75,10 +80,12 @@ export function playAnnotationOutline(groups: readonly (readonly OutlineRect[])[
   let start: number | undefined
 
   function stop() {
+    if (controller.signal.aborted) return
     cancelAnimationFrame(frame)
     controller.abort()
     canvas.remove()
     if (clearOutline === stop) clearOutline = undefined
+    onStop?.()
   }
 
   function animate(now: number) {
@@ -134,19 +141,24 @@ document.addEventListener("sidenote:outline", (event) => {
     const dialog = first.closest<HTMLDialogElement>("dialog[data-sidenote-dialog][open]")
     const draw = () => {
       if (kind === "blocks") {
-        const blocks = targets.map((target) => target.getBoundingClientRect()).filter(({ width, height }) => width > 0 && height > 0)
-        playAnnotationOutline(
-          blocks.map((rect) => [rect]),
+        const blocks = targets.map((target) => ({ target, rect: target.getBoundingClientRect() })).filter(({ rect }) => rect.width > 0 && rect.height > 0)
+        const cards = blocks.map(({ target }) => target).filter((target) => target.hasAttribute("data-sidenote-card"))
+        const stop = playAnnotationOutline(
+          blocks.map(({ rect }) => [rect]),
           "blocks",
-          dialog
+          {
+            dialog,
+            onStop: () => cards.forEach((card) => card.removeAttribute("data-outline-active"))
+          }
         )
+        if (stop) for (const card of cards) card.setAttribute("data-outline-active", "")
       } else {
         const rects = targets.flatMap((target) => {
           const range = document.createRange()
           range.selectNodeContents(target)
           return annotationTextRects(range)
         })
-        playAnnotationOutline([rects], "text", dialog)
+        playAnnotationOutline([rects], "text", { dialog })
       }
     }
     if (dialog) {

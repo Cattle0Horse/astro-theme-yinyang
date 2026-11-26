@@ -59,7 +59,9 @@ function prepareTarget(target: HTMLElement) {
 function highlight(target: HTMLElement) {
   if (current !== target || !target.isConnected) return
   const range = textRange(target)
-  if (range) clear = playAnnotationOutline([annotationTextRects(range)], "text", target.closest<HTMLDialogElement>("dialog[data-sidenote-dialog][open]"))
+  if (range) {
+    clear = playAnnotationOutline([annotationTextRects(range)], "text", { dialog: target.closest<HTMLDialogElement>("dialog[data-sidenote-dialog][open]") })
+  }
 }
 
 function highlightCurrentFragment() {
