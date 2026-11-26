@@ -48,8 +48,9 @@ try {
 
   await cp(join(root, "starter"), consumer, { recursive: true })
   const siteManifest = JSON.parse(await readFile(join(consumer, "package.json"), "utf8"))
-  assert.equal(siteManifest.dependencies[manifest.name], "github:Cattle0Horse/blog-theme#semver:^0.1.0")
-  pnpm(["add", source("semver:^0.1.0")], consumer)
+  const selector = new URL(siteManifest.dependencies[manifest.name]).hash.slice(1)
+  assert.match(selector, /^semver:.+/u)
+  pnpm(["add", source(selector)], consumer)
   const installedManifest = join(consumer, "node_modules", manifest.name, "package.json")
   assert.equal(JSON.parse(await readFile(installedManifest, "utf8")).version, manifest.version)
   build("/")

@@ -4,10 +4,10 @@
 
 ## 创建自己的站点
 
-使用已发布的 GitHub 版本标签从 `starter/` 创建站点。下面以 `v0.1.0` 为例。
+首个版本标签 `v0.1.0` 发布后，可从该标签的 `starter/` 创建站点。
 
 ```sh
-pnpm create astro@latest my-blog --template Cattle0Horse/blog-theme/starter#v0.1.0
+pnpm create astro@latest my-blog --template 'Cattle0Horse/astro-theme-yinyang/starter#v0.1.0'
 cd my-blog
 pnpm dev
 ```
