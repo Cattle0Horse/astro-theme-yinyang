@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useSyncExternalStore, type MouseEvent, type PointerEvent, type ToggleEvent } from "react"
+import { useCallback, useEffect, useLayoutEffect, useRef, useSyncExternalStore, type MouseEvent, type PointerEvent, type ToggleEvent } from "react"
 import { ALargeSmall, Moon, Sun, Monitor } from "lucide-react"
 import type { Appearance as Preference, FontSize } from "../lib/appearance"
 import { createFontPreviewLayout } from "./font-preview-layout"
@@ -10,11 +10,14 @@ interface Props {
 }
 
 interface SizeDrag {
+  slider: HTMLInputElement
   pointerId: number | null
-  move: (clientX: number) => void
-  input: (size: number) => void
-  finish: (commit: boolean) => void
-  cancel: () => void
+  startX: number
+  startSize: number
+  committedSize: FontSize
+  targetSize: number
+  moved: boolean
+  frame: number
 }
 
 const modes = [
@@ -49,13 +52,33 @@ function focusMenu({ currentTarget: menu, newState }: ToggleEvent<HTMLDivElement
   menu.querySelector<HTMLElement>('[aria-pressed="true"], input')?.focus({ preventScroll: true })
 }
 
+function previewSize(slider: HTMLInputElement, size: number) {
+  const value = String(size)
+  const style = document.documentElement.style
+  if (slider.value !== value) slider.value = value
+  if (style.getPropertyValue("--font-preview") !== value) style.setProperty("--font-preview", value)
+}
+
 export default function Appearance({ initial, palettes }: Props) {
   const drag = useRef<SizeDrag | null>(null)
   const sliderRef = useRef<HTMLInputElement>(null)
   const previewLayout = useRef<ReturnType<typeof createFontPreviewLayout> | null>(null)
+  const clearSizeDrag = useCallback(() => {
+    const session = drag.current
+    if (!session) return
+    drag.current = null
+    const { slider, pointerId, committedSize, frame } = session
+    if (pointerId !== null && slider.hasPointerCapture(pointerId)) slider.releasePointerCapture(pointerId)
+    cancelAnimationFrame(frame)
+    slider.value = String(window.yinyangAppearance?.read().size ?? committedSize)
+    slider.step = "1"
+    document.documentElement.style.removeProperty("--font-preview")
+    previewLayout.current?.restore()
+  }, [])
+
   useEffect(() => {
     function clearPreview() {
-      drag.current?.cancel()
+      clearSizeDrag()
       previewLayout.current?.clear()
     }
 
@@ -64,7 +87,7 @@ export default function Appearance({ initial, palettes }: Props) {
       document.removeEventListener("astro:before-swap", clearPreview)
       clearPreview()
     }
-  }, [])
+  }, [clearSizeDrag])
 
   const hydrated = useSyncExternalStore(
     subscribeHydration,
@@ -86,78 +109,51 @@ export default function Appearance({ initial, palettes }: Props) {
 
   function startSizeDrag({ currentTarget: slider, pointerId, button, isPrimary, clientX }: PointerEvent<HTMLInputElement>) {
     if (button !== 0 || !isPrimary) return
-    const start = slider.valueAsNumber
-    drag.current?.cancel()
+    const startSize = slider.valueAsNumber
+    clearSizeDrag()
     const layout = (previewLayout.current ??= createFontPreviewLayout())
     layout.prepare()
-    const root = document.documentElement
-    let frame = 0
-    let moved = false
-    let target = start
-    const session: SizeDrag = { pointerId, move, input, finish, cancel }
-    drag.current = session
+    drag.current = { slider, pointerId, startX: clientX, startSize, committedSize: current.size, targetSize: startSize, moved: false, frame: 0 }
     slider.step = "any"
     slider.setPointerCapture(pointerId)
-    showSize(start)
+    previewSize(slider, startSize)
+  }
 
-    function showSize(size: number) {
-      const value = String(size)
-      if (slider.value !== value) slider.value = value
-      if (root.style.getPropertyValue("--font-preview") !== value) root.style.setProperty("--font-preview", value)
-    }
-
-    function input(size: number) {
-      target = size
-      showSize(moved ? target : start)
-    }
-
-    function cancel() {
-      drag.current = null
-      if (session.pointerId !== null && slider.hasPointerCapture(session.pointerId)) slider.releasePointerCapture(session.pointerId)
-      cancelAnimationFrame(frame)
-      slider.value = String(window.yinyangAppearance?.read().size ?? current.size)
-      slider.step = "1"
-      root.style.removeProperty("--font-preview")
-      layout.restore()
-    }
-
-    function move(nextX: number) {
-      if (moved || Math.abs(nextX - clientX) < 3) return
-      moved = true
-      showSize(target)
-    }
-
-    function finish(commit: boolean) {
-      session.pointerId = null
-      const from = moved ? slider.valueAsNumber : start
-      const committed = commit ? (Math.round(target) as FontSize) : current.size
-      showSize(from)
-      if (commit) update({ size: committed })
-      if (from === committed) {
-        cancel()
-        return
-      }
-
-      const releasedAt = performance.now()
-
-      function settle(now: number) {
-        const progress = Math.max(0, (now - releasedAt) / 140)
-        if (progress >= 1) {
-          cancel()
-          return
-        }
-        const size = from + (committed - from) * (1 - (1 - progress) ** 2)
-        showSize(size)
-        frame = requestAnimationFrame(settle)
-      }
-
-      frame = requestAnimationFrame(settle)
-    }
+  function moveSizeDrag({ pointerId, clientX }: PointerEvent<HTMLInputElement>) {
+    const session = drag.current
+    if (session?.pointerId !== pointerId || session.moved || Math.abs(clientX - session.startX) < 3) return
+    session.moved = true
+    previewSize(session.slider, session.targetSize)
   }
 
   function endSizeDrag({ pointerId, type }: PointerEvent<HTMLInputElement>) {
     const session = drag.current
-    if (session?.pointerId === pointerId) session.finish(type === "pointerup")
+    if (session?.pointerId !== pointerId) return
+    session.pointerId = null
+    const { slider } = session
+    const from = session.moved ? slider.valueAsNumber : session.startSize
+    const commit = type === "pointerup"
+    const to = commit ? (Math.round(session.targetSize) as FontSize) : session.committedSize
+    previewSize(slider, from)
+    if (commit) update({ size: to })
+    if (from === to) {
+      clearSizeDrag()
+      return
+    }
+
+    const releasedAt = performance.now()
+
+    const settle = (now: number) => {
+      const progress = Math.max(0, (now - releasedAt) / 140)
+      if (progress >= 1) {
+        clearSizeDrag()
+        return
+      }
+      previewSize(slider, from + (to - from) * (1 - (1 - progress) ** 2))
+      session.frame = requestAnimationFrame(settle)
+    }
+
+    session.frame = requestAnimationFrame(settle)
   }
 
   function switchMode(event: MouseEvent<HTMLButtonElement>) {
@@ -228,17 +224,20 @@ export default function Appearance({ initial, palettes }: Props) {
           aria-label="全站字号"
           defaultValue={initial.size}
           onPointerDown={startSizeDrag}
-          onPointerMove={({ pointerId, clientX }) => {
-            const session = drag.current
-            if (session?.pointerId === pointerId) session.move(clientX)
-          }}
+          onPointerMove={moveSizeDrag}
           onPointerUp={endSizeDrag}
           onPointerCancel={endSizeDrag}
           onLostPointerCapture={endSizeDrag}
-          onKeyDown={() => drag.current?.cancel()}
+          onKeyDown={clearSizeDrag}
           onInput={({ currentTarget }) => {
-            if (drag.current) drag.current.input(currentTarget.valueAsNumber)
-            else update({ size: currentTarget.valueAsNumber as FontSize })
+            const size = currentTarget.valueAsNumber
+            const session = drag.current
+            if (session) {
+              session.targetSize = size
+              previewSize(currentTarget, session.moved ? size : session.startSize)
+            } else {
+              update({ size: size as FontSize })
+            }
           }}
         />
       </div>
