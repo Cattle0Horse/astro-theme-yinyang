@@ -345,15 +345,6 @@
 .reading :is([data-sidenote-card], [data-sidenote][open]) {
   cursor: pointer;
 }
-.reading [data-sidenote-return] {
-  padding: 0;
-  color: var(--accent);
-  font-size: var(--fs-meta);
-  cursor: pointer;
-}
-.reading [data-sidenote-return]:hover {
-  text-decoration: underline;
-}
 .reading [data-sidenote-panel] > section :last-child {
   margin-bottom: 0;
 }

@@ -23,9 +23,20 @@ export function enhanceSidenotes(article: HTMLElement) {
   let room = 0
   const moved: { note: HTMLDetailsElement; body: HTMLElement }[] = []
   const rail = new Map<string, { section: HTMLElement; source: HTMLElement | undefined }>()
+  const cards = "[data-sidenote-card], details[data-sidenote][open]"
 
   function outline(kind: SidenoteOutline["kind"], targets: HTMLElement[]) {
     article.dispatchEvent(new CustomEvent<SidenoteOutline>("sidenote:outline", { bubbles: true, detail: { kind, targets } }))
+  }
+
+  function locateOriginal(card: HTMLElement, focus: boolean) {
+    const id = card.dataset.sidenoteCard ?? card.dataset.sidenote
+    if (!id) return
+    if (focus) controls.find((control) => idsFor(control).includes(id))?.focus({ preventScroll: true })
+    outline(
+      "text",
+      segments.filter((segment) => idsFor(segment).includes(id))
+    )
   }
 
   const restore = () => {
@@ -85,6 +96,9 @@ export function enhanceSidenotes(article: HTMLElement) {
       if (wide.matches) {
         const section = document.createElement("section")
         section.dataset.sidenoteCard = id
+        section.tabIndex = 0
+        section.setAttribute("aria-label", "旁注 " + id)
+        section.setAttribute("aria-keyshortcuts", "Enter Space")
         const body = document.createElement("div")
         body.append(...Array.from(note.childNodes).filter((node) => !(node instanceof HTMLElement && node.tagName === "SUMMARY")))
         moved.push({ note, body })
@@ -96,6 +110,7 @@ export function enhanceSidenotes(article: HTMLElement) {
       } else {
         note.hidden = mapped.has(id) && !selection.includes(id)
         if (mapped.has(id)) note.open = !note.hidden
+        note.tabIndex = note.open ? 0 : -1
       }
     }
     panel.hidden = !wide.matches || !notes.length
@@ -144,26 +159,14 @@ export function enhanceSidenotes(article: HTMLElement) {
     control.tabIndex = 0
     control.setAttribute("role", "button")
   })
-  const returnButtons = notes.map((note) => {
-    const button = document.createElement("button")
-    button.type = "button"
-    button.dataset.sidenoteReturn = note.dataset.sidenote ?? ""
-    button.textContent = "返回原文"
-    button.setAttribute("aria-label", "返回旁注 " + note.dataset.sidenote + " 的原文")
-    note.append(button)
-    return button
-  })
+  for (const note of notes) note.setAttribute("aria-keyshortcuts", "Enter Space")
   const click = (event: MouseEvent) => {
     const target = event.target
     if (event.defaultPrevented || !(target instanceof Element) || getSelection()?.toString()) return
-    const button = target.closest<HTMLElement>("[data-sidenote-return]")
-    if (!button && target.closest("a, button, summary, input, select, textarea, label")) return
-    const card = target.closest<HTMLElement>("[data-sidenote-card], details[data-sidenote]")
-    const noteId = button?.dataset.sidenoteReturn ?? card?.dataset.sidenoteCard ?? card?.dataset.sidenote
-    if (noteId) {
-      const matching = segments.filter((segment) => idsFor(segment).includes(noteId))
-      if (button && !event.detail) controls.find((control) => idsFor(control).includes(noteId))?.focus({ preventScroll: true })
-      outline("text", matching)
+    if (target.closest("a, button, summary, input, select, textarea, label")) return
+    const card = target.closest<HTMLElement>(cards)
+    if (card) {
+      locateOriginal(card, false)
       return
     }
     const segment = controlFor(target)
@@ -173,6 +176,7 @@ export function enhanceSidenotes(article: HTMLElement) {
   const toggle = (event: Event) => {
     const note = event.target
     if (wide.matches || !(note instanceof HTMLDetailsElement) || !note.hasAttribute("data-sidenote")) return
+    note.tabIndex = note.open ? 0 : -1
     if (selection.includes(note.dataset.sidenote ?? "") && !note.open) {
       selection = selection.filter((id) => id !== note.dataset.sidenote)
       if (anchor && !idsFor(anchor).some((id) => selection.includes(id))) anchor = undefined
@@ -182,8 +186,15 @@ export function enhanceSidenotes(article: HTMLElement) {
   }
 
   const key = (event: KeyboardEvent) => {
+    if (event.defaultPrevented || (event.key !== "Enter" && event.key !== " ")) return
+    const target = event.target
+    if (target instanceof HTMLElement && target.matches(cards)) {
+      event.preventDefault()
+      locateOriginal(target, true)
+      return
+    }
     const control = controlFor(event.target)
-    if (control && controls.includes(control) && (event.key === "Enter" || event.key === " ")) {
+    if (control && controls.includes(control)) {
       event.preventDefault()
       selectNotes(control)
     }
@@ -228,8 +239,11 @@ export function enhanceSidenotes(article: HTMLElement) {
       control.removeAttribute("aria-pressed")
       control.removeAttribute("aria-expanded")
     }
-    for (const note of notes) note.hidden = false
-    for (const button of returnButtons) button.remove()
+    for (const note of notes) {
+      note.hidden = false
+      note.removeAttribute("tabindex")
+      note.removeAttribute("aria-keyshortcuts")
+    }
     delete article.dataset.enhanced
   }
   document.addEventListener("astro:after-swap", dispose)

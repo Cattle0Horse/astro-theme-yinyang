@@ -914,8 +914,9 @@ test("sidenote outlines only mark the destination in both directions", async ({ 
   const cards = await outlines(2)
   const railLeft = (await panel.boundingBox())!.x
   expect(cards.flat().every(({ x }) => x >= railLeft - 5)).toBe(true)
-  const button = panel.getByRole("button", { name: "返回旁注 2 的原文" })
-  await button.press("Enter")
+  const card = panel.getByRole("region", { name: "旁注 2" })
+  await expect(card.getByText("返回原文")).toHaveCount(0)
+  await card.press("Enter")
   const [text] = await outlines(1)
   expect(text.every(({ x }) => x < railLeft)).toBe(true)
   await expect(overlap).toBeFocused()
