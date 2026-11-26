@@ -8,7 +8,7 @@
 | --- | --- |
 | `src/styles/` | `site.css` 汇总 Tailwind 和主题样式。`base.css` 维护字体、主题变量、基础布局和全站滚动条。`entries.css` 负责时间线、分页和文章页布局，`prose.css` 负责正文排版和代码块，`reader.css` 负责图片、表格、公式与旁注，`navigation.css` 负责导航和外观过渡。 |
 | `src/layouts/` | 首页和详情共用 Astro 页面壳与页头。文章详情由阅读布局安排正文、目录和旁注空间。 |
-| `src/components/` | 页头和目录的样式与组件同目录维护，各自包含响应式规则。`ui/controls.css` 维护 `IconButton`、复制反馈和 tooltip 的共用样式。 |
+| `src/components/` | 页头和目录各自维护布局与断点。`appearance.css` 维护外观控件的图标、弹层与状态，页头决定它们在不同宽度下的排布。`ui/controls.css` 维护 `IconButton`、复制反馈、tooltip 和菜单入场动画。 |
 
 共用代码随真实页面一起交付。先用两个调用方验证组件边界，再扩展变体。新增页面使用现有布局和语义变量。Markdown 插件输出的静态元素共享相同的样式变量，交互组件按需加载。
 
