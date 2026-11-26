@@ -203,8 +203,8 @@ export function enhanceSidenotes(article: HTMLElement) {
     if (useModal()) {
       const note = notes.find((candidate) => candidate.dataset.sidenote === idsFor(source)[0])
       if (note) {
+        outline("blocks", [])
         openNote(note, source)
-        outline("blocks", [dialogBody])
       }
       return
     }

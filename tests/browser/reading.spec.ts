@@ -573,6 +573,8 @@ test("long mobile sidenotes scroll inside a centered window without moving the a
   await trigger.click()
   const dialog = page.getByRole("dialog", { name: "旁注 1" })
   await expect(dialog).toBeVisible()
+  await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))))
+  await expect(page.locator("canvas[data-annotation-outline]")).toHaveCount(0)
   const bounds = (await dialog.boundingBox())!
   const viewportCenter = await page.evaluate(() => document.documentElement.clientWidth / 2)
   expect(bounds.x + bounds.width / 2).toBeCloseTo(viewportCenter, 0)
