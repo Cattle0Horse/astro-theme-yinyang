@@ -107,6 +107,8 @@ a.notes-page-link:active {
 }
 .note-entry-time {
   display: block;
+  inline-size: fit-content;
+  max-inline-size: 100%;
   margin-block-end: 12px;
   color: var(--muted);
   font-size: var(--fs-meta);
@@ -177,6 +179,17 @@ a.note-source:focus-visible {
 .entry-name {
   color: var(--ink);
   overflow-wrap: anywhere;
+}
+.entry-line > .entry-name,
+.note-entry-title > .entry-name {
+  display: inline-flex;
+  align-items: center;
+  max-inline-size: 100%;
+  padding-inline: 7px;
+  margin-inline-start: -7px;
+}
+.entry-line > .entry-name {
+  justify-self: start;
 }
 .entry-name:hover,
 .entry-name:focus-visible {
@@ -302,5 +315,16 @@ a.note-source:focus-visible {
   }
   .timeline .entry-date {
     font-size: calc(var(--fs-meta) - 0.0625rem);
+  }
+}
+@media (pointer: coarse) {
+  .entry-line > .entry-name,
+  .note-entry-title > .entry-name,
+  .note-entry:not(:has(.note-entry-title)) > .note-entry-time {
+    min-block-size: 44px;
+  }
+  .note-entry:not(:has(.note-entry-title)) > .note-entry-time {
+    display: flex;
+    align-items: center;
   }
 }

@@ -1215,6 +1215,40 @@ test("matches the source timeline proportions and reveals theme scrollbars on sc
   await expect(page.locator("html")).not.toHaveAttribute("data-scrollbar-visible", "", { timeout: 3000 })
 })
 
+test("timeline links keep blank space inert while primary touch targets stay tall", async ({ browser }) => {
+  const page = await browser.newPage({ viewport: { width: 390, height: 800 }, hasTouch: true })
+  try {
+    await page.goto("/")
+    const home = page.url()
+    const title = page.getByRole("link", { name: "阅读与记录之间" })
+    const blog = (await title.boundingBox())!
+    expect(blog.height).toBeGreaterThanOrEqual(44)
+    expect(blog.x + blog.width).toBeLessThan(345)
+    await page.touchscreen.tap(345, blog.y + blog.height / 2)
+    await expect(page).toHaveURL(home)
+    await title.tap()
+    await expect(page).toHaveURL(/\/posts\/reading\/markdown\/$/u)
+
+    await page.goto("/notes/")
+    const note = page
+      .locator(".note-entry")
+      .filter({ hasNot: page.getByRole("heading", { level: 3 }) })
+      .first()
+    const date = note.locator(".note-entry-time")
+    await date.scrollIntoViewIfNeeded()
+    const notes = (await date.boundingBox())!
+    expect(notes.height).toBeGreaterThanOrEqual(44)
+    expect(notes.x + notes.width).toBeLessThan(345)
+    await page.touchscreen.tap(345, notes.y + notes.height / 2)
+    await expect(page).toHaveURL(/\/notes\/$/u)
+    const href = (await date.getAttribute("href"))!
+    await date.tap()
+    await expect(page).toHaveURL(new URL(href, page.url()).href)
+  } finally {
+    await page.close()
+  }
+})
+
 test("code controls update in both directions and keep code visible", async ({ page }) => {
   await page.goto(article)
   const code = page.locator(".reading pre")
