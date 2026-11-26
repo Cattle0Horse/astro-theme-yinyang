@@ -55,8 +55,8 @@
 }
 .toc-desktop .toc-indicator {
   position: absolute;
-  inset-inline-start: 1px;
-  width: 1px;
+  inset-inline-start: 0.5px;
+  width: 2px;
   border-radius: 1px;
   background: var(--accent);
   pointer-events: none;
