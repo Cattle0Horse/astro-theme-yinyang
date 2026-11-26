@@ -145,6 +145,33 @@
 .reading [data-footnotes] li {
   scroll-margin-block-start: 20px;
 }
+.reading [data-footnote-ref] {
+  --link-rest-line: transparent;
+  --link-underline-height: 1px;
+  position: relative;
+  display: inline-block;
+  min-inline-size: 1.25rem;
+  min-block-size: 1.125rem;
+  margin-inline: 2px;
+  padding-inline: 0.25em;
+  border: 1px solid color-mix(in srgb, var(--accent) 32%, transparent);
+  border-radius: 0.4em;
+  background-color: color-mix(in srgb, var(--accent) 8%, var(--paper));
+  background-position: left calc(100% - 1px);
+  font: var(--ui-weight-strong) var(--fs-note)/1.2 var(--ui-font);
+  text-align: center;
+  transition: background-color 160ms ease;
+}
+.reading [data-footnote-ref]:is(:hover, :focus-visible, :active) {
+  background-color: color-mix(in srgb, var(--accent) 16%, var(--paper));
+}
+@media (pointer: coarse) {
+  .reading [data-footnote-ref]::after {
+    content: "";
+    position: absolute;
+    inset: -4px -3px;
+  }
+}
 .reading :is([data-footnote-highlight], [data-footnote-clause]) {
   position: relative;
   isolation: isolate;

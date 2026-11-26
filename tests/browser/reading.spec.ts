@@ -809,6 +809,17 @@ test("footnotes highlight the entry and return to the annotated clause", async (
   const reference = page.getByRole("link", { name: "查看脚注 2", exact: true })
   const paragraph = page.locator("p").filter({ has: reference })
   const height = (await paragraph.boundingBox())!.height
+  const referenceColor = await reference.evaluate((element) => getComputedStyle(element).color)
+  const underlinePosition = await reference.evaluate((element) => getComputedStyle(element).backgroundPosition)
+  await expect(reference).toHaveCSS("--link-underline-end", "0%")
+  await reference.hover()
+  await expect(reference).toHaveCSS("color", referenceColor)
+  await expect(reference).toHaveCSS("background-position", underlinePosition)
+  await expect(reference).toHaveCSS("--link-underline-end", "100%")
+  await page.mouse.move(0, 0)
+  await expect(reference).toHaveCSS("background-position", underlinePosition)
+  await expect(reference).toHaveCSS("--link-underline-end", "0%")
+
   await expectEasedReadingJump(reference)
   await expect(page).toHaveURL(/#user-content-fn-2$/u)
   const note = page.locator("#user-content-fn-2")
