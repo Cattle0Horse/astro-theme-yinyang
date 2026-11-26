@@ -6,6 +6,7 @@ interface RecordedOutlinePoint {
   x: number
   y: number
   radius: number
+  start?: { x: number; y: number }
 }
 
 async function recordAnnotationOutlines(page: Page) {
@@ -13,8 +14,13 @@ async function recordAnnotationOutlines(page: Page) {
     const contours = new WeakMap<Path2D, RecordedOutlinePoint[]>()
     const started = new WeakSet<Path2D>()
     const closed = new WeakSet<Path2D>()
-    const { arcTo } = Path2D.prototype
+    const { arcTo, moveTo } = Path2D.prototype
     const { stroke } = CanvasRenderingContext2D.prototype
+    const starts = new WeakMap<Path2D, { x: number; y: number }>()
+    Path2D.prototype.moveTo = function (this: Path2D, x, y) {
+      starts.set(this, { x, y })
+      moveTo.call(this, x, y)
+    }
     Path2D.prototype.arcTo = function (this: Path2D, x, y, x2, y2, radius) {
       const points = contours.get(this) ?? []
       points.push({ x, y, radius })
@@ -32,11 +38,16 @@ async function recordAnnotationOutlines(page: Page) {
           closed.add(path)
           const { left, top, width, height } = this.canvas.getBoundingClientRect()
           const transform = this.getTransform()
-          const rendered = points.map(({ x, y, radius }) => ({
+          const position = ({ x, y }: { x: number; y: number }) => ({
             x: left + scrollX + ((x * transform.a + transform.e) * width) / this.canvas.width,
-            y: top + scrollY + ((y * transform.d + transform.f) * height) / this.canvas.height,
-            radius: (radius * transform.d * height) / this.canvas.height
+            y: top + scrollY + ((y * transform.d + transform.f) * height) / this.canvas.height
+          })
+          const rendered = points.map((point) => ({
+            ...position(point),
+            radius: (point.radius * transform.d * height) / this.canvas.height
           }))
+          const start = starts.get(path)
+          if (start) Object.assign(rendered[0], { start: position(start) })
           const outlines = JSON.parse(this.canvas.dataset.closedOutlines ?? "[]") as RecordedOutlinePoint[][]
           this.canvas.dataset.closedOutlines = JSON.stringify([...outlines, rendered])
         }
@@ -1002,7 +1013,12 @@ test("sidenote outlines only mark the destination in both directions", async ({ 
     const sharesRail = ({ x, radius }: RecordedOutlinePoint) => Math.abs(x - rail.x) < 0.25 && radius > 0
     const connectsTop = (point: RecordedOutlinePoint) => sharesRail(point) && Math.abs(point.y + point.radius - rail.top) < 0.25
     const connectsBottom = (point: RecordedOutlinePoint) => sharesRail(point) && Math.abs(point.y - point.radius - rail.bottom) < 0.25
-    expect(cards.some((points) => points.some(connectsTop) && points.some(connectsBottom))).toBe(true)
+    const contour = cards.find((points) => points.some(connectsTop) && points.some(connectsBottom))
+    expect(contour).toBeDefined()
+    const start = contour?.[0].start
+    expect(start).toBeDefined()
+    expect(Math.abs(start!.x - rail.x)).toBeLessThan(0.25)
+    expect(Math.abs(start!.y - rail.top)).toBeLessThan(0.25)
   }
   await expect(page.locator("canvas[data-annotation-outline]")).toHaveCount(0)
   expect(await railColor()).not.toBe("rgba(0, 0, 0, 0)")

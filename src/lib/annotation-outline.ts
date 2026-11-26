@@ -12,6 +12,7 @@ interface OutlineGroup {
   rects: readonly OutlineRect[]
   key?: symbol
   radius?: number
+  rail?: "left" | "right"
 }
 
 interface PlayingOutline {
@@ -75,9 +76,9 @@ export function playAnnotationOutline(groups: readonly OutlineGroup[], kind: "te
   const x = dialog ? 0 : scrollX
   const y = dialog ? 0 : scrollY
   const padding = kind === "rail" ? 0 : kind === "text" ? 3 : 4
-  for (const { target, key, rects, radius = kind === "text" ? 5 : 7 } of fresh) {
+  for (const { target, key, rects, radius = kind === "text" ? 5 : 7, rail } of fresh) {
     const documentRects = rects.map(({ left, top, right, bottom }) => ({ left: left + x, right: right + x, top: top + y, bottom: bottom + y }))
-    const { path, length, turns } = createAnnotationContour(documentRects, padding, radius)
+    const { path, length, turns } = createAnnotationContour(documentRects, padding, radius, rail)
     const pace = outlinePace(length, turns)
     layer.paths.set(key ?? target, { target, path, length, pace, duration: Math.min(1000, Math.max(285, 155 + pace.travel * 0.76)) })
   }
@@ -183,7 +184,7 @@ document.addEventListener("sidenote:outline", (event) => {
     const draw = () => {
       if (kind === "blocks") {
         const sharesRail = first.hasAttribute("data-sidenote-card")
-        const blocks = fresh.flatMap((target) => {
+        const blocks = fresh.flatMap<OutlineGroup>((target) => {
           const { left, right, top, bottom, width, height } = target.getBoundingClientRect()
           if (!width || !height) return []
           if (!sharesRail) return [{ target, rects: [{ left, right, top, bottom }] }]
@@ -192,9 +193,9 @@ document.addEventListener("sidenote:outline", (event) => {
           const radius = parseFloat(style.getPropertyValue("--sidenote-corner-radius"))
           // The straight segment meets the shortened rail at both tangents.
           if (style.direction === "rtl") {
-            return [{ target, radius, rects: [{ left: left - 1, right: right - halfRail, top, bottom }] }]
+            return [{ target, radius, rail: "right", rects: [{ left: left - 1, right: right - halfRail, top, bottom }] }]
           }
-          return [{ target, radius, rects: [{ left: left + halfRail, right: right + 1, top, bottom }] }]
+          return [{ target, radius, rail: "left", rects: [{ left: left + halfRail, right: right + 1, top, bottom }] }]
         })
         playAnnotationOutline(blocks, sharesRail ? "rail" : "blocks", dialog)
       } else {

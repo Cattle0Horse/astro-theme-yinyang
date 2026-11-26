@@ -67,8 +67,12 @@ function contourPoints(rects: readonly OutlineRect[], padding: number) {
   return [left[0], ...right, { x: right.at(-1)!.x, y: last.bottom + padding }, { x: left.at(-1)!.x, y: last.bottom + padding }, ...left.slice(1).reverse()]
 }
 
-export function createAnnotationContour(rects: readonly OutlineRect[], padding: number, radius: number) {
+export function createAnnotationContour(rects: readonly OutlineRect[], padding: number, radius: number, rail?: "left" | "right") {
   const points = contourPoints(rects, padding)
+  if (rail === "right") {
+    const [topLeft, topRight, ...rest] = points
+    points.splice(0, points.length, topRight, topLeft, ...rest.reverse())
+  }
   const distance = (a: Point, b: Point) => Math.hypot(a.x - b.x, a.y - b.y)
   const corners = points.map((point, index) => {
     const previous = points.at(index - 1)!
@@ -78,17 +82,23 @@ export function createAnnotationContour(rects: readonly OutlineRect[], padding: 
   })
   const start = corners[0]
   const path = new Path2D()
-  path.moveTo(start.x + start.radius, start.y)
+  if (rail) path.moveTo(start.x, start.y + start.radius)
+  else path.moveTo(start.x + start.radius, start.y)
   let length = 0
   const turns: number[] = []
-  for (let index = 1; index <= corners.length; index++) {
-    const previous = corners[index - 1]
-    const corner = corners[index % corners.length]
+  for (let step = 0; step < corners.length; step++) {
+    const index = (step + (rail ? 0 : 1)) % corners.length
+    const previous = corners.at(index - 1)!
+    const corner = corners[index]
     path.arcTo(corner.x, corner.y, corner.next.x, corner.next.y, corner.radius)
     const arc = (Math.PI * corner.radius) / 2
-    length += previous.nextLength - previous.radius - corner.radius
+    if (!rail || step > 0) length += previous.nextLength - previous.radius - corner.radius
     turns.push(length + arc / 2)
     length += arc
+  }
+  if (rail) {
+    const last = corners.at(-1)!
+    length += last.nextLength - last.radius - start.radius
   }
   path.closePath()
   return { path, length, turns }
