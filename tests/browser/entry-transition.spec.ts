@@ -208,6 +208,92 @@ test("reselecting the current page cancels a slow navigation without remounting 
   expect(reloads).toBe(0)
 })
 
+test("quick navigation keeps the loading notice hidden", async ({ page }) => {
+  await page.goto("/")
+  const href = "/posts/footnote-highlight-demo/"
+  const body = await page.content()
+  await page.route("**" + href, (route) => route.fulfill({ body, contentType: "text/html" }))
+  const shown = await page.evaluate(async (href) => {
+    const loading = document.querySelector(".navigation-loading")!
+    let shown = false
+    const observer = new MutationObserver(() => {
+      shown ||= getComputedStyle(loading).visibility === "visible"
+    })
+    observer.observe(loading, { attributes: true })
+    const link = document.createElement("a")
+    link.href = href
+    document.body.append(link)
+    await new Promise<void>((resolve) => {
+      document.addEventListener("astro:page-load", () => resolve(), { once: true })
+      link.click()
+    })
+    observer.disconnect()
+    return shown
+  }, href)
+  expect(shown).toBe(false)
+})
+
+test("loading notice shrinks smoothly and reopens from its current size", async ({ page }) => {
+  await page.goto("/")
+  const loading = page.getByRole("status", { includeHidden: true }).filter({ hasText: "正在加载" })
+  const label = loading.locator(".navigation-loading-label")
+  const width = () => label.evaluate((element) => parseFloat(getComputedStyle(element).width))
+  let release!: () => void
+  const first = new Promise<void>((resolve) => {
+    release = resolve
+  })
+  const article = "/posts/reading/markdown/"
+  await page.route("**" + article, async (route) => {
+    await first
+    await route.continue()
+  })
+  let releaseNotes!: () => void
+  const second = new Promise<void>((resolve) => {
+    releaseNotes = resolve
+  })
+  await page.route("**/notes/", async (route) => {
+    await second
+    await route.continue()
+  })
+  try {
+    await page.getByRole("link", { name: "阅读与记录之间" }).click()
+    await expect.poll(width).toBeGreaterThan(100)
+    const sampling = page.evaluate(async () => {
+      const notice = document.querySelector<HTMLElement>(".navigation-loading")!
+      const label = notice.querySelector(".navigation-loading-label")!
+      const text = notice.querySelector(".navigation-loading-text")!
+      const frames: { width: number; textOpacity: number }[] = []
+      await new Promise<void>((resolve) => {
+        let reopening = false
+
+        function sample() {
+          const width = parseFloat(getComputedStyle(label).width)
+          frames.push({ width, textOpacity: Number(getComputedStyle(text).opacity) })
+          if (reopening && frames.length > 2 && width > 100 && frames.at(-2)!.width <= 100) return resolve()
+          if (!reopening && width < 95 && width > 40) {
+            reopening = true
+            document.querySelector<HTMLAnchorElement>('.header-desktop a[href="/notes/"]')!.click()
+          }
+          requestAnimationFrame(sample)
+        }
+
+        requestAnimationFrame(sample)
+      })
+      return frames
+    })
+    release()
+    const samples = await sampling
+    expect(samples.some(({ width, textOpacity }) => width > 100 && textOpacity < 0.5)).toBe(true)
+    const frameChanges = samples.slice(1).map(({ width }, index) => Math.abs(width - samples[index].width))
+    expect(Math.max(...frameChanges)).toBeLessThan(35)
+  } finally {
+    release()
+    releaseNotes()
+  }
+  await expect(page).toHaveURL(/\/notes\/$/u)
+  await expect(loading).toBeHidden()
+})
+
 test("shows loading on a slow navigation then staggers the entrance until reading input", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 })
   const article = "/posts/reading/markdown/"

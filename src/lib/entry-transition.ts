@@ -8,6 +8,7 @@ const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)")
 const root = document.documentElement
 const interruptEvents = ["pointerdown", "wheel", "touchmove", "keydown"] as const
 let pendingNavigation: { href: string } | undefined
+let loadingTimer = 0
 let stopEntrance: (() => void) | undefined
 let cleanupShared: (() => void) | undefined
 
@@ -44,6 +45,14 @@ function visibleBounds(element: HTMLElement) {
   const rect = element.getBoundingClientRect()
   const viewport = document.documentElement
   if (rect.width && rect.height && rect.right > 0 && rect.left < viewport.clientWidth && rect.bottom > 0 && rect.top < viewport.clientHeight) return rect
+}
+
+function setNavigationLoading(active: boolean) {
+  window.clearTimeout(loadingTimer)
+  const loading = document.querySelector(".navigation-loading")
+  if (!loading || (active && loading.hasAttribute("data-loading"))) return
+  // A replacement navigation can take over the indicator before it starts closing.
+  loadingTimer = window.setTimeout(() => loading.toggleAttribute("data-loading", active), active ? 150 : 0)
 }
 
 function entryPair(outgoing: Document, incoming: Document) {
@@ -204,22 +213,20 @@ document.addEventListener("astro:before-preparation", (event) => {
   const preparation = event as TransitionBeforePreparationEvent
   const { signal, to } = preparation
   const load = preparation.loader
-  const loading = document.querySelector<HTMLElement>(".navigation-loading")
   preparation.loader = async () => {
     const pending = { href: to.href }
     pendingNavigation = pending
     const finish = () => {
-      if (pendingNavigation === pending) pendingNavigation = undefined
+      if (pendingNavigation === pending) {
+        pendingNavigation = undefined
+        setNavigationLoading(false)
+      }
       signal.removeEventListener("abort", finish)
       document.removeEventListener("astro:after-swap", finish)
     }
     signal.addEventListener("abort", finish, { once: true })
     document.addEventListener("astro:after-swap", finish, { once: true, signal })
-    loading?.setAttribute("data-loading", "")
-    const hide = () => {
-      if (!pendingNavigation || pendingNavigation === pending) loading?.removeAttribute("data-loading")
-    }
-    signal.addEventListener("abort", hide, { once: true })
+    setNavigationLoading(true)
     try {
       await load()
       if (supportsViewTransitions && !reducedMotion.matches && !signal.aborted && !preparation.defaultPrevented && !preparation.to.hash) {
@@ -229,8 +236,6 @@ document.addEventListener("astro:before-preparation", (event) => {
       finish()
       throw error
     } finally {
-      signal.removeEventListener("abort", hide)
-      hide()
       if (preparation.defaultPrevented) finish()
     }
   }

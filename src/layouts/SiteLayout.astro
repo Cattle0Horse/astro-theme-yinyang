@@ -81,7 +81,9 @@ const contentMotion = {
     <Tooltip client:load />
     <div class="navigation-loading" role="status" aria-live="polite" transition:persist="navigation-loading">
       <span class="navigation-progress" aria-hidden="true"></span>
-      <span class="navigation-loading-label">正在加载…</span>
+      <span class="navigation-loading-label">
+        <span class="navigation-loading-text">正在加载…</span>
+      </span>
     </div>
     <main id="main" transition:name="reading-content" transition:animate={{ forwards: contentMotion, backwards: contentMotion }}>
       <slot />

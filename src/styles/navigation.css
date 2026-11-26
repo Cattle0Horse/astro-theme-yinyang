@@ -35,15 +35,11 @@
   z-index: 1600;
   overflow: hidden;
   visibility: hidden;
-  opacity: 0;
   pointer-events: none;
-  transition:
-    opacity 180ms ease,
-    visibility 0s linear 180ms;
+  transition: visibility 0s linear 460ms;
 }
 .navigation-loading[data-loading] {
   visibility: visible;
-  opacity: 1;
   transition-delay: 0s;
 }
 .navigation-progress {
@@ -52,15 +48,20 @@
   width: 35%;
   height: 3px;
   background: var(--accent);
+  opacity: 0;
+  animation: navigation-progress 1.1s linear infinite;
+  animation-play-state: paused;
+  transition: opacity 180ms ease;
 }
 [data-loading] .navigation-progress {
-  animation: navigation-progress 1.1s linear infinite;
+  opacity: 1;
+  animation-play-state: running;
 }
 .navigation-loading-label {
   display: flex;
   align-items: center;
   gap: 9px;
-  width: 40px;
+  inline-size: 40px;
   height: 40px;
   margin: 16px auto 0;
   padding-inline: 10px;
@@ -72,9 +73,29 @@
   color: var(--ink);
   box-shadow: 0 4px 16px #0002;
   font-size: var(--fs-ui);
+  opacity: 0;
+  scale: 0.88;
+  transition:
+    inline-size 260ms cubic-bezier(0.22, 1, 0.36, 1) 80ms,
+    padding-inline 260ms cubic-bezier(0.22, 1, 0.36, 1) 80ms,
+    opacity 120ms ease-in 340ms,
+    scale 120ms ease-in 340ms;
 }
 [data-loading] .navigation-loading-label {
-  animation: navigation-label-in 460ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  inline-size: calc(57px + 5em);
+  padding-inline: 16px;
+  opacity: 1;
+  scale: 1;
+  transition-delay: 80ms, 80ms, 0s, 0s;
+}
+.navigation-loading-text {
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 100ms ease;
+}
+[data-loading] .navigation-loading-text {
+  opacity: 1;
+  transition-delay: 170ms;
 }
 .navigation-loading-label::before {
   content: "" / "";
@@ -85,9 +106,11 @@
   border-top-color: var(--accent);
   border-right-color: var(--accent);
   border-radius: 50%;
+  animation: img-loading-spin 700ms linear infinite;
+  animation-play-state: paused;
 }
 [data-loading] .navigation-loading-label::before {
-  animation: img-loading-spin 700ms linear infinite;
+  animation-play-state: running;
 }
 @keyframes navigation-progress {
   from {
@@ -95,20 +118,6 @@
   }
   to {
     translate: 300% 0;
-  }
-}
-@keyframes navigation-label-in {
-  from {
-    transform: scale(0.88);
-  }
-  30% {
-    width: 40px;
-    transform: scale(1);
-  }
-  to {
-    width: calc(58px + 6em);
-    padding-inline: 16px;
-    transform: scale(1);
   }
 }
 @keyframes reading-page-out {
