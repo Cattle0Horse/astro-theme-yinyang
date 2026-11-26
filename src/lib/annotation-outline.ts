@@ -40,12 +40,14 @@ function distanceAt(pace: ReturnType<typeof outlinePace>, time: number) {
   return (left + part) * pace.step
 }
 
-export function playAnnotationOutline(groups: readonly (readonly OutlineRect[])[], kind: "text" | "blocks" = "text") {
+export function playAnnotationOutline(groups: readonly (readonly OutlineRect[])[], kind: "text" | "blocks" = "text", dialog?: HTMLDialogElement | null) {
   clearOutline?.()
+  const x = dialog ? 0 : scrollX
+  const y = dialog ? 0 : scrollY
   const paths = groups
     .filter((rects) => rects.length)
     .map((rects) => {
-      const documentRects = rects.map(({ left, top, right, bottom }) => ({ left: left + scrollX, right: right + scrollX, top: top + scrollY, bottom: bottom + scrollY }))
+      const documentRects = rects.map(({ left, top, right, bottom }) => ({ left: left + x, right: right + x, top: top + y, bottom: bottom + y }))
       const { path, length, turns } = createAnnotationContour(documentRects, kind === "text" ? 3 : 4, kind === "text" ? 5 : 7)
       const pace = outlinePace(length, turns)
       return { path, length, pace, duration: Math.min(1000, Math.max(285, 155 + pace.travel * 0.76)), closedAt: undefined as number | undefined }
@@ -66,7 +68,8 @@ export function playAnnotationOutline(groups: readonly (readonly OutlineRect[])[
   surface.lineWidth = 1.5
   surface.lineCap = "round"
   surface.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue("--accent").trim()
-  document.body.append(canvas)
+  const host = dialog ?? document.body
+  host.append(canvas)
   const controller = new AbortController()
   let frame = requestAnimationFrame(animate)
   let start: number | undefined
@@ -82,7 +85,7 @@ export function playAnnotationOutline(groups: readonly (readonly OutlineRect[])[
     start ??= now
     surface.resetTransform()
     surface.clearRect(0, 0, canvas.width, canvas.height)
-    surface.setTransform(scale, 0, 0, scale, -scrollX * scale, -scrollY * scale)
+    surface.setTransform(scale, 0, 0, scale, dialog ? 0 : -scrollX * scale, dialog ? 0 : -scrollY * scale)
     let running = false
     for (const outline of paths) {
       const { path, length, pace, duration } = outline
@@ -108,6 +111,8 @@ export function playAnnotationOutline(groups: readonly (readonly OutlineRect[])[
   }
 
   window.addEventListener("resize", stop, { signal: controller.signal })
+  dialog?.addEventListener("close", stop, { signal: controller.signal })
+  if (dialog && kind === "text") dialog.addEventListener("scroll", stop, { capture: true, signal: controller.signal })
   clearOutline = stop
   return stop
 }
@@ -125,12 +130,15 @@ document.addEventListener("sidenote:outline", (event) => {
   if (!targets.length) return
   pendingSidenote = requestAnimationFrame(() => {
     if (!targets.every((target) => target.isConnected)) return
+    const first = targets[0]
+    const dialog = first.closest<HTMLDialogElement>("dialog[data-sidenote-dialog][open]")
     const draw = () => {
       if (kind === "blocks") {
         const blocks = targets.map((target) => target.getBoundingClientRect()).filter(({ width, height }) => width > 0 && height > 0)
         playAnnotationOutline(
           blocks.map((rect) => [rect]),
-          "blocks"
+          "blocks",
+          dialog
         )
       } else {
         const rects = targets.flatMap((target) => {
@@ -138,10 +146,13 @@ document.addEventListener("sidenote:outline", (event) => {
           range.selectNodeContents(target)
           return annotationTextRects(range)
         })
-        playAnnotationOutline([rects])
+        playAnnotationOutline([rects], "text", dialog)
       }
     }
-    const first = targets[0]
+    if (dialog) {
+      draw()
+      return
+    }
     const rect = first.getBoundingClientRect()
     const header = document.querySelector(".site-header")
     const stickyHeaderBottom = header && getComputedStyle(header).position === "sticky" ? header.getBoundingClientRect().bottom : 0

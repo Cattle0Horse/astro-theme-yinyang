@@ -1,11 +1,13 @@
 let cancelScroll: (() => void) | undefined
 
-export function scrollToReadingTarget(event: MouseEvent, link: HTMLAnchorElement, target: HTMLElement, align: "start" | "center", arrived?: () => void) {
+type ReadingPosition = "start" | "center" | number
+
+export function scrollToReadingTarget(event: MouseEvent, link: HTMLAnchorElement, target: HTMLElement, align: ReadingPosition, arrived?: () => void) {
   event.preventDefault()
   scrollToReadingPosition(target, align, arrived, link)
 }
 
-export function scrollToReadingPosition(target: HTMLElement, align: "start" | "center", arrived?: () => void, link?: HTMLAnchorElement) {
+export function scrollToReadingPosition(target: HTMLElement, align: ReadingPosition, arrived?: () => void, link?: HTMLAnchorElement) {
   cancelScroll?.()
   const controller = new AbortController()
   let frame = requestAnimationFrame(start)
@@ -27,7 +29,8 @@ export function scrollToReadingPosition(target: HTMLElement, align: "start" | "c
     const padding = parseFloat(getComputedStyle(root).scrollPaddingBlockStart) || 0
     const headingMargin = parseFloat(getComputedStyle(target).scrollMarginBlockStart) || 0
     const offset = align === "center" ? (innerHeight - height) / 2 : padding + headingMargin
-    const to = Math.max(0, Math.min(from + top - offset, root.scrollHeight - root.clientHeight))
+    const position = typeof align === "number" ? align : from + top - offset
+    const to = Math.max(0, Math.min(position, root.scrollHeight - root.clientHeight))
     const distance = to - from
     if (link && link.hash !== location.hash) {
       const state = { ...history.state, scrollX, scrollY: from }

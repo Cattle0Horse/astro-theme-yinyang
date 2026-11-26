@@ -45,7 +45,7 @@ document.addEventListener(
     if (!link?.hash || link.hasAttribute("download") || (link.target && link.target.toLowerCase() !== "_self")) return
     if (link.origin !== location.origin || link.pathname !== location.pathname || link.search !== location.search) return
     const heading = headingFor(link.hash)
-    if (heading) {
+    if (heading && !heading.closest("dialog[data-sidenote-dialog][open]")) {
       highlight(heading)
       scrollToReadingTarget(event, link, heading, "start")
     }

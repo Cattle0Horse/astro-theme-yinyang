@@ -1,6 +1,7 @@
 import { annotationTextRects } from "./annotation-contour"
 import { clearAnnotationFeedback, playAnnotationOutline } from "./annotation-outline"
 import { scrollToReadingTarget } from "./reading-scroll"
+import type { SidenoteReveal } from "./sidenotes-reader"
 
 const links = "a[data-footnote-ref], a[data-footnote-backref]"
 let current: HTMLElement | undefined
@@ -46,7 +47,9 @@ function prepareTarget(target: HTMLElement) {
   if (target.hasAttribute("data-footnote-ref")) {
     const sidenote = target.closest<HTMLDetailsElement>("details[data-sidenote]")
     if (sidenote) {
-      sidenote.dispatchEvent(new Event("sidenote:reveal", { bubbles: true }))
+      const request: SidenoteReveal = { reference: target }
+      sidenote.dispatchEvent(new CustomEvent<SidenoteReveal>("sidenote:reveal", { bubbles: true, detail: request }))
+      if (request.open) return request
       sidenote.hidden = false
       sidenote.open = true
     }
@@ -56,15 +59,18 @@ function prepareTarget(target: HTMLElement) {
 function highlight(target: HTMLElement) {
   if (current !== target || !target.isConnected) return
   const range = textRange(target)
-  if (range) clear = playAnnotationOutline([annotationTextRects(range)])
+  if (range) clear = playAnnotationOutline([annotationTextRects(range)], "text", target.closest<HTMLDialogElement>("dialog[data-sidenote-dialog][open]"))
 }
 
 function highlightCurrentFragment() {
   const target = targetFor(location.hash)
   if (target === current) return
   if (target) {
-    prepareTarget(target)
-    frame = requestAnimationFrame(() => highlight(target))
+    const request = prepareTarget(target)
+    frame = requestAnimationFrame(() => {
+      request?.open?.()
+      highlight(target)
+    })
   } else clearFootnoteFeedback()
 }
 
@@ -76,8 +82,12 @@ document.addEventListener(
     if (!link || !link.getAttribute("href")?.startsWith("#") || link.hasAttribute("download") || (link.target && link.target.toLowerCase() !== "_self")) return
     const target = targetFor(link.hash)
     if (!target) return
-    prepareTarget(target)
-    scrollToReadingTarget(event, link, target, "center", () => highlight(target))
+    link.dispatchEvent(new Event("sidenote:suspend", { bubbles: true }))
+    const request = prepareTarget(target)
+    scrollToReadingTarget(event, link, target, request?.open ? (request.position ?? scrollY) : "center", () => {
+      request?.open?.()
+      highlight(target)
+    })
   },
   { capture: true }
 )
