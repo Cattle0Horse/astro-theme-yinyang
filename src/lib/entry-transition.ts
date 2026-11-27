@@ -5,15 +5,47 @@ import { closeHeaderMenu, openHeaderMenu } from "../components/header-menu"
 
 const partNames = ["title", "time"] as const
 const root = document.documentElement
-const interruptEvents = ["pointerdown", "click", "wheel", "touchmove", "keydown"] as const
+const interruptEvents = ["click", "wheel", "touchmove", "keydown"] as const
 let pendingNavigation: { href: string } | undefined
 let loadingTimer = 0
 let stopEntrance: (() => void) | undefined
 let cleanupShared: (() => void) | undefined
+let pressedDuringEntrance = false
+
+document.addEventListener(
+  "pointerdown",
+  (event) => {
+    if (!event.isPrimary || event.button !== 0) return
+    pressedDuringEntrance = Boolean(stopEntrance)
+    if (pressedDuringEntrance) {
+      event.preventDefault()
+      event.stopImmediatePropagation()
+    }
+  },
+  { capture: true }
+)
+
+document.addEventListener(
+  "pointercancel",
+  (event) => {
+    if (event.isPrimary) pressedDuringEntrance = false
+  },
+  { capture: true }
+)
 
 document.addEventListener(
   "click",
   (event) => {
+    if (event.detail > 0) {
+      // A press may begin on the animation and end after the new page settles.
+      const pressedTooEarly = pressedDuringEntrance
+      pressedDuringEntrance = false
+      if (stopEntrance || pressedTooEarly) {
+        event.preventDefault()
+        event.stopImmediatePropagation()
+        return
+      }
+    }
     if (event.defaultPrevented || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return
     const link = event.target instanceof Element ? event.target.closest("a[href]") : null
     if (!(link instanceof HTMLAnchorElement) || link.hasAttribute("data-astro-reload") || link.hasAttribute("download") || (link.target && link.target !== "_self")) return

@@ -1,4 +1,5 @@
 import { expect, test, type Locator, type Page } from "@playwright/test"
+import { waitForPageEntrance } from "./page-entrance"
 
 const article = "/posts/reading/markdown/"
 
@@ -755,7 +756,10 @@ test("formula copy stays centered after returning by link or browser history", a
     await blog.click()
     await expect(page.getByRole("link", { name: "数学公式示例" })).toBeVisible()
     if (byHistory) await page.goBack()
-    else await page.getByRole("link", { name: "数学公式示例" }).click()
+    else {
+      await waitForPageEntrance(page)
+      await page.getByRole("link", { name: "数学公式示例" }).click()
+    }
 
     await formula.locator(".katex-html").hover()
     await expect(formula.locator(".math-actions")).toHaveCSS("opacity", "1")
@@ -767,6 +771,7 @@ test("formula copy stays centered after returning by link or browser history", a
     const glyph = (await icon.boundingBox())!
     expect(glyph.x + glyph.width / 2).toBeCloseTo(box.x + box.width / 2)
     expect(glyph.y + glyph.height / 2).toBeCloseTo(box.y + box.height / 2)
+    await waitForPageEntrance(page)
     await copy.click()
     await expect(copy).toHaveAttribute("data-copy-state", "success")
     await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(source)

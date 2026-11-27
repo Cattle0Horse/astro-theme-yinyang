@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test"
+import { waitForPageEntrance } from "./page-entrance"
 
 test("Notes and its example tag link to later pages and back", async ({ page }) => {
   for (const root of ["/notes/", "/notes/tags/分页示例/"]) {
@@ -10,6 +11,7 @@ test("Notes and its example tag link to later pages and back", async ({ page }) 
     const previous = pages.getByRole("link", { name: "上一页" })
     await expect(previous).toHaveAttribute("href", root)
     await expect(page.locator(".note-entry").first()).toBeVisible()
+    await waitForPageEntrance(page)
     await previous.click()
     await expect(next).toHaveAttribute("href", root + "page/2/")
   }
