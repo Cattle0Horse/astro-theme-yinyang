@@ -33,19 +33,25 @@ document.addEventListener(
   { capture: true }
 )
 
+// Stop pointer activation before the document's fragment and route handlers.
+window.addEventListener(
+  "click",
+  (event) => {
+    if (event.detail === 0) return
+    // A press may begin on the animation and end after the new page settles.
+    const pressedTooEarly = pressedDuringEntrance
+    pressedDuringEntrance = false
+    if (stopEntrance || pressedTooEarly) {
+      event.preventDefault()
+      event.stopImmediatePropagation()
+    }
+  },
+  { capture: true }
+)
+
 document.addEventListener(
   "click",
   (event) => {
-    if (event.detail > 0) {
-      // A press may begin on the animation and end after the new page settles.
-      const pressedTooEarly = pressedDuringEntrance
-      pressedDuringEntrance = false
-      if (stopEntrance || pressedTooEarly) {
-        event.preventDefault()
-        event.stopImmediatePropagation()
-        return
-      }
-    }
     if (event.defaultPrevented || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return
     const link = event.target instanceof Element ? event.target.closest("a[href]") : null
     if (!(link instanceof HTMLAnchorElement) || link.hasAttribute("data-astro-reload") || link.hasAttribute("download") || (link.target && link.target !== "_self")) return

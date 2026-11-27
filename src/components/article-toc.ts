@@ -1,3 +1,5 @@
+import { followHeading } from "../lib/heading-feedback"
+
 function revealTocItem(scroller: HTMLElement | null, item: HTMLElement | null) {
   if (!scroller || !item) return
   const bounds = scroller.getBoundingClientRect()
@@ -58,7 +60,10 @@ function mountToc(mobile: HTMLElement, article: HTMLElement) {
     (event) => {
       const target = event.target
       if (target === dialog || (target instanceof Element && target.closest(".toc-dialog-header button"))) closeDialog()
-      else if (target instanceof Element && target.closest("a[href^='#']") && event.button === 0 && !event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey) closeDialog()
+      else if (target instanceof Element) {
+        const link = target.closest<HTMLAnchorElement>("a[href^='#']")
+        if (link) followHeading(event, link, closeDialog)
+      }
     },
     { signal }
   )
@@ -82,7 +87,7 @@ function mountToc(mobile: HTMLElement, article: HTMLElement) {
   })
   const refreshHeading = () => {
     frame = 0
-    if (!headingsByPosition.length) return
+    if (!headingsByPosition.length || document.documentElement.hasAttribute("data-reading-scroll")) return
     const positions = headingsByPosition.map(({ element }) => element.getBoundingClientRect().top)
     let index = 0
     for (let i = 0; i < positions.length && positions[i] <= 66; i++) index = i
@@ -128,6 +133,7 @@ function mountToc(mobile: HTMLElement, article: HTMLElement) {
     refreshHeading()
     window.addEventListener("scroll", schedule, { passive: true, signal })
     window.addEventListener("resize", schedule, { signal })
+    document.addEventListener("yinyang:reading-scroll-end", schedule, { signal })
   }
   return () => {
     controller.abort()

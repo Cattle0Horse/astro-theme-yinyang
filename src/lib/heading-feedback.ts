@@ -37,20 +37,30 @@ function highlightCurrentFragment() {
   else clearHeadingFeedback()
 }
 
+export function followHeading(event: MouseEvent, link: HTMLAnchorElement, beforeScroll?: () => void) {
+  if (event.defaultPrevented || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return
+  if (!link.hash || link.hasAttribute("download") || (link.target && link.target.toLowerCase() !== "_self")) return
+  if (link.origin !== location.origin || link.pathname !== location.pathname || link.search !== location.search) return
+  const heading = headingFor(link.hash)
+  if (!heading || heading.closest("dialog[data-sidenote-dialog][open]")) return
+  beforeScroll?.()
+  clearHeadingFeedback()
+  scrollToReadingTarget(event, link, heading, "start", () => {
+    highlight(heading)
+    if (event.detail === 0) {
+      heading.tabIndex = -1
+      heading.focus({ preventScroll: true })
+    }
+  })
+}
+
 document.addEventListener(
   "click",
   (event) => {
-    if (event.defaultPrevented || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return
     const link = event.target instanceof Element ? event.target.closest<HTMLAnchorElement>("a[href]") : null
-    if (!link?.hash || link.hasAttribute("download") || (link.target && link.target.toLowerCase() !== "_self")) return
-    if (link.origin !== location.origin || link.pathname !== location.pathname || link.search !== location.search) return
-    const heading = headingFor(link.hash)
-    if (heading && !heading.closest("dialog[data-sidenote-dialog][open]")) {
-      highlight(heading)
-      scrollToReadingTarget(event, link, heading, "start")
-    }
+    // The mobile TOC restores the page scroll position before following the link.
+    if (link && !link.closest(".toc-dialog")) followHeading(event, link)
   },
-  // Start the feedback before Astro or the browser scrolls to the fragment.
   { capture: true }
 )
 window.addEventListener("hashchange", highlightCurrentFragment)

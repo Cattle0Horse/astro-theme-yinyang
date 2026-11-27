@@ -69,12 +69,13 @@ async function expectEasedReadingJump(link: Locator) {
     if (!(element instanceof HTMLAnchorElement)) throw new Error("Expected a reading link")
     const samples = [{ position: scrollY, time: performance.now() }]
     element.click()
+    if (location.hash !== element.hash) throw new Error("The address bar fragment should change in the click handler")
     await new Promise<void>((resolve) => {
       const start = performance.now()
 
       function sample(now: number) {
         samples.push({ position: scrollY, time: now })
-        if (now - start < 750) requestAnimationFrame(sample)
+        if (now - start < 1000) requestAnimationFrame(sample)
         else resolve()
       }
 
@@ -869,6 +870,39 @@ test("TOC scrolls the article smoothly and hides its own scrollbar after use", a
   await expectEasedReadingJump(toc.getByRole("link", { name: "化学式" }))
   await expect(page.getByRole("dialog")).toBeHidden()
   await expect(page).toHaveURL(new RegExp(encodeURIComponent("化学式") + "$", "u"))
+})
+
+test("desktop TOC updates the fragment at once and keeps the sidebar still on the way to a distant heading", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 620 })
+  const articleLink = "/posts/csapp/2-representation-and-processing-of-information/"
+  await page.goto(articleLink)
+  const toc = page.getByRole("navigation", { name: "文章目录" })
+  const destination = toc.getByRole("link").last()
+  await destination.scrollIntoViewIfNeeded()
+  const result = await destination.evaluate(async (link) => {
+    if (!(link instanceof HTMLAnchorElement)) throw new Error("Expected a heading link")
+    const list = link.closest("ol")!
+    const start = list.scrollTop
+    const image = Array.from(document.images).find((image) => image.closest(".reading") && image.complete && image.naturalWidth)
+    if (!image) throw new Error("Expected a loaded article image")
+    link.click()
+    const fragmentUpdated = location.hash === link.hash
+    const positions = new Set<number>()
+    let imageStayedVisible = true
+    const until = performance.now() + 1200
+    while (performance.now() < until) {
+      await new Promise(requestAnimationFrame)
+      const { top } = document.getElementById(decodeURIComponent(link.hash.slice(1)))!.getBoundingClientRect()
+      if (top < innerHeight) break
+      positions.add(list.scrollTop)
+      imageStayedVisible &&= image.checkVisibility({ opacityProperty: true, visibilityProperty: true })
+    }
+    return { fragmentUpdated, positions: [...positions], start, imageStayedVisible }
+  })
+  expect(result.fragmentUpdated).toBe(true)
+  expect(result.positions).toEqual([result.start])
+  expect(result.imageStayedVisible).toBe(true)
+  await expect(destination).toHaveAttribute("aria-current", "location")
 })
 
 test("heading fragments point to their destination and replay after another activation", async ({ page }) => {

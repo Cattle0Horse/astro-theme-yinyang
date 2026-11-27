@@ -5,6 +5,15 @@
   position: relative;
   display: flow-root;
 }
+:root[data-reading-scroll] {
+  overflow-anchor: none;
+}
+@media (hover: hover) and (pointer: fine) {
+  :root[data-reading-scroll] .reading,
+  :root[data-reading-scroll] .reading * {
+    cursor: default !important;
+  }
+}
 .reading :where(p, ul, ol, dl, blockquote, .table-scroll, pre, figure) {
   margin-block: 0 1rem;
 }

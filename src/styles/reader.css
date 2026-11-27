@@ -74,6 +74,10 @@
 :root[data-js] .loading-image-frame.is-retrying::after {
   translate: 0 -0.75rem;
 }
+:root[data-reading-scroll][data-js] .loading-image-frame::before,
+:root[data-reading-scroll][data-js] .loading-image-frame::after {
+  animation-play-state: paused;
+}
 .loading-failed {
   position: absolute;
   inset: 0;
