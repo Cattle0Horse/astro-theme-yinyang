@@ -91,6 +91,9 @@ try {
   assert.match(article, /href="\/my-blog\/posts\/nested\/mine\/attachment\.txt"/u)
   assert.equal(await output("posts/nested/mine/attachment.txt"), "my attachment\n")
   assert.match(await output("notes/2026-01/001/index.html"), /我的笔记/u)
+  for (const path of ["tags/index.html", "notes/tags/index.html"]) {
+    assert.match(await output(path), /暂无标签/u)
+  }
   assert.match(await output("404.html"), /href="\/my-blog\/logo\.png"/u)
   assert.match(await output("sitemap.xml"), /https:\/\/example\.com\/my-blog\/posts\/nested\/mine\//u)
   assert.deepEqual(await readdir(join(consumer, "dist/posts")), ["nested"])

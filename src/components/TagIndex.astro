@@ -15,14 +15,18 @@ const title = section === "notes" ? "Notes 标签" : "Blog 标签"
 <SiteLayout title={title}>
   <section class="shell">
     <h1 class="section-title">{title}</h1>
-    <ul class="tag-list flex flex-wrap gap-x-4 gap-y-3 pt-5">
-      {tags.map(({ id, label, entries }) => (
-        <li>
-          <a class="tag-link" href={tagsPath(section, id)}>
-            #{label} <span class="caption">({entries.length})</span>
-          </a>
-        </li>
-      ))}
-    </ul>
+    {tags.length ? (
+      <ul class="tag-list flex flex-wrap gap-x-4 gap-y-3 pt-5">
+        {tags.map(({ id, label, entries }) => (
+          <li>
+            <a class="tag-link" href={tagsPath(section, id)}>
+              #{label} <span class="caption">({entries.length})</span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    ) : (
+      <p class="pt-5 text-muted">暂无标签</p>
+    )}
   </section>
 </SiteLayout>
