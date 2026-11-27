@@ -20,6 +20,7 @@ export function scrollToReadingPosition(target: HTMLElement, align: ReadingPosit
     // Synchronize Astro without letting the browser jump to the new fragment.
     window.dispatchEvent(new PopStateEvent("popstate", { state: next }))
   }
+  const historyIndex = history.state?.index
   const controller = new AbortController()
   let frame = requestAnimationFrame(start)
 
@@ -34,6 +35,10 @@ export function scrollToReadingPosition(target: HTMLElement, align: ReadingPosit
       cancelScroll = undefined
       if (!replaced && root.hasAttribute("data-reading-scroll")) {
         root.removeAttribute("data-reading-scroll")
+        const state = history.state
+        if (state?.index === historyIndex && state && (state.scrollX !== scrollX || state.scrollY !== scrollY)) {
+          history.replaceState({ ...state, scrollX, scrollY }, "")
+        }
         document.dispatchEvent(new Event("yinyang:reading-scroll-end"))
       }
     }
@@ -89,6 +94,14 @@ export function scrollToReadingPosition(target: HTMLElement, align: ReadingPosit
 
   cancelScroll = finish
   const { signal } = controller
+  window.addEventListener(
+    "scrollend",
+    (event) => {
+      // Each instant step can emit scrollend. Astro only needs the final position.
+      if (event.target === document && root.hasAttribute("data-reading-scroll")) event.stopImmediatePropagation()
+    },
+    { capture: true, signal }
+  )
   for (const type of ["wheel", "touchmove"]) window.addEventListener(type, stop, { passive: true, signal })
   window.addEventListener(
     "pointerdown",

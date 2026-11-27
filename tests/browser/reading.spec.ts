@@ -958,6 +958,34 @@ test("clicking another TOC link reverses a scroll in progress from the current p
   await expect(up).toHaveAttribute("aria-current", "location")
 })
 
+test("rapid TOC changes keep their fragments and restore the last settled reading position", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 800 })
+  await page.goto("/posts/math-demo/")
+  const toc = page.getByRole("navigation", { name: "文章目录" })
+  const first = toc.getByRole("link").first()
+  const last = toc.getByRole("link").last()
+  const firstHash = await first.getAttribute("href")
+  const lastHash = await last.getAttribute("href")
+  await last.click()
+  await page.waitForFunction(() => scrollY > 600)
+  for (const [link, hash] of [
+    [first, firstHash],
+    [last, lastHash],
+    [first, firstHash],
+    [last, lastHash]
+  ] as const) {
+    await link.click()
+    await expect(page).toHaveURL((url) => url.hash === hash)
+  }
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollHeight - innerHeight - scrollY)).toBeLessThanOrEqual(2)
+  const settled = await page.evaluate(() => scrollY)
+  await page.goBack()
+  await expect(page).toHaveURL((url) => url.hash === firstHash)
+  await page.goForward()
+  await expect(page).toHaveURL((url) => url.hash === lastHash)
+  await expect.poll(() => page.evaluate(() => scrollY)).toBe(settled)
+})
+
 test("heading fragments point to their destination and replay after another activation", async ({ page }) => {
   const id = "表达与结构"
   const fragment = "#" + encodeURIComponent(id)
