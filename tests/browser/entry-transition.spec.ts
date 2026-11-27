@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test"
+import { expect, test, type Page } from "@playwright/test"
 import type { TransitionBeforeSwapEvent } from "astro:transitions/client"
 import { waitForPageEntrance } from "./page-entrance"
 
@@ -34,35 +34,39 @@ test("Blog title and date are shared on opening an article and returning to its 
   await expect(page.locator("body")).toHaveAttribute("data-shared-snapshots", "title time")
 })
 
+async function pauseNextEntrance(page: Page) {
+  await page.evaluate(() => {
+    document.addEventListener(
+      "astro:before-swap",
+      (event) => {
+        const { viewTransition } = event as TransitionBeforeSwapEvent
+        void viewTransition.ready.then(() => {
+          for (const animation of document.getAnimations()) {
+            const effect = animation.effect
+            if (effect instanceof KeyframeEffect && (effect.pseudoElement?.startsWith("::view-transition") || effect.target?.matches(".reading > *"))) {
+              animation.pause()
+            }
+          }
+        })
+      },
+      { once: true }
+    )
+  })
+}
+
 test.describe("touch-capable navigation", () => {
   test.use({ hasTouch: true })
-  test("pointer clicks during an article transition neither skip the animation nor open another page", async ({ page }) => {
+  test("pointer clicks on entering content neither skip the animation nor follow its tag link", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 })
     await page.goto("/")
-    await page.evaluate(() => {
-      document.addEventListener(
-        "astro:before-swap",
-        (event) => {
-          const { viewTransition } = event as TransitionBeforeSwapEvent
-          void viewTransition.ready.then(() => {
-            for (const animation of document.getAnimations()) {
-              const effect = animation.effect
-              if (effect instanceof KeyframeEffect && (effect.pseudoElement?.startsWith("::view-transition") || effect.target?.matches(".reading > *"))) {
-                animation.pause()
-              }
-            }
-          })
-        },
-        { once: true }
-      )
-    })
+    await pauseNextEntrance(page)
     await page.getByRole("link", { name: "阅读与记录之间" }).click()
     await expect(page.locator("body")).toHaveAttribute("data-shared-snapshots", "title time")
 
     const article = /\/posts\/reading\/markdown\/$/u
-    const notes = page.getByRole("navigation", { name: "主导航" }).getByRole("link", { name: "Notes" })
-    await notes.evaluate((link) => link.addEventListener("click", () => link.setAttribute("data-clicked", "")))
-    const { x, y, width, height } = (await notes.boundingBox())!
+    const tag = page.getByRole("link", { name: "#Markdown" })
+    await tag.evaluate((link) => link.addEventListener("click", () => link.setAttribute("data-clicked", "")))
+    const { x, y, width, height } = (await tag.boundingBox())!
     await page.mouse.dblclick(x + width / 2, y + height / 2)
     await page.touchscreen.tap(x + width / 2, y + height / 2)
     await expect(page).toHaveURL(article)
@@ -82,13 +86,47 @@ test.describe("touch-capable navigation", () => {
     await expect(page.getByRole("heading", { name: "阅读与记录之间", exact: true })).toBeVisible()
     await waitForPageEntrance(page)
     await page.mouse.up()
-    await expect(notes).not.toHaveAttribute("data-clicked", "")
+    await expect(tag).not.toHaveAttribute("data-clicked", "")
     await expect(page).toHaveURL(article)
-    await notes.click()
-    await expect(page).toHaveURL(/\/notes\/$/u)
+    await tag.click()
+    await expect(page).toHaveURL(/\/tags\/markdown\/$/u)
     await page.goBack()
     await expect(page).toHaveURL(article)
   })
+})
+
+test("the site title and table of contents work before the article entrance ends", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.goto("/")
+  const article = page.getByRole("link", { name: "阅读与记录之间" })
+  const openArticle = async () => {
+    await pauseNextEntrance(page)
+    await article.click()
+    await expect(page.locator("body")).toHaveAttribute("data-shared-snapshots", "title time")
+  }
+  await openArticle()
+  await page.locator(".site-name").click()
+  await expect(page.getByRole("heading", { name: "Blog" })).toBeVisible()
+  await waitForPageEntrance(page)
+  await openArticle()
+
+  const chapter = page.getByRole("navigation", { name: "文章目录" }).getByRole("link", { name: "表达与结构" })
+  const fragment = await chapter.getAttribute("href")
+  const start = await chapter.evaluate((link) => {
+    link.addEventListener(
+      "click",
+      () => {
+        link.setAttribute("data-click-hash", location.hash)
+        link.setAttribute("data-click-y", String(scrollY))
+      },
+      { once: true }
+    )
+    return scrollY
+  })
+  const { x, y, width, height } = (await chapter.boundingBox())!
+  await page.mouse.click(x + width / 2, y + height / 2)
+  await expect(chapter).toHaveAttribute("data-click-hash", fragment!)
+  await expect(chapter).toHaveAttribute("data-click-y", String(start))
 })
 
 test("untitled Notes share the date only and unrelated pages use the regular transition", async ({ page }) => {

@@ -5,18 +5,22 @@ import { closeHeaderMenu, openHeaderMenu } from "../components/header-menu"
 
 const partNames = ["title", "time"] as const
 const root = document.documentElement
-const interruptEvents = ["click", "wheel", "touchmove", "keydown"] as const
+const interruptEvents = ["wheel", "touchmove", "keydown"] as const
 let pendingNavigation: { href: string } | undefined
 let loadingTimer = 0
 let stopEntrance: (() => void) | undefined
 let cleanupShared: (() => void) | undefined
 let pressedDuringEntrance = false
 
+function isEnteringContent(target: EventTarget | null) {
+  return Boolean(stopEntrance && target instanceof Element && target.closest("#main") && !target.closest(".toc-desktop, .toc-mobile"))
+}
+
 document.addEventListener(
   "pointerdown",
   (event) => {
     if (!event.isPrimary || event.button !== 0) return
-    pressedDuringEntrance = Boolean(stopEntrance)
+    pressedDuringEntrance = isEnteringContent(event.target)
     if (pressedDuringEntrance) {
       event.preventDefault()
       event.stopImmediatePropagation()
@@ -41,7 +45,7 @@ window.addEventListener(
     // A press may begin on the animation and end after the new page settles.
     const pressedTooEarly = pressedDuringEntrance
     pressedDuringEntrance = false
-    if (stopEntrance || pressedTooEarly) {
+    if (pressedTooEarly || isEnteringContent(event.target)) {
       event.preventDefault()
       event.stopImmediatePropagation()
     }
@@ -248,6 +252,13 @@ document.addEventListener("astro:before-swap", (event) => {
   stopEntrance = stop
   signal.addEventListener("abort", stop, { once: true })
   for (const type of interruptEvents) document.addEventListener(type, stop, { capture: true, passive: true, signal: listeners.signal })
+  document.addEventListener(
+    "click",
+    (event) => {
+      if (event.detail === 0) stop()
+    },
+    { capture: true, passive: true, signal: listeners.signal }
+  )
   window.addEventListener("popstate", stop, { signal: listeners.signal })
   document.addEventListener(
     "astro:after-swap",

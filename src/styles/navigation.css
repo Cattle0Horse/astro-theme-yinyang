@@ -5,6 +5,11 @@
   display: inline-block;
   max-width: 100%;
 }
+/* Capture the outgoing content and shared elements without covering live navigation. */
+:root[data-astro-transition],
+:root[data-astro-transition] #main {
+  view-transition-name: none;
+}
 ::view-transition {
   pointer-events: none;
 }
