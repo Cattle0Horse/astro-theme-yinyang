@@ -7,4 +7,4 @@
 - Notes 放在 `src/content/notes/YYYY-MM/NNN.md`，填写 `date`。附件放在条目目录内，在 Markdown 中用相对路径引用。
 - `pnpm build` 生成 `dist/`。部署时设置 `SITE_URL`，GitHub Pages 项目站点再设置 `SITE_BASE=/仓库名`。
 
-主题依赖在 `package.json` 中指向 GitHub 的 `#semver:^0.1.0` 范围。升级时运行 `pnpm update astro-theme-yinyang`，pnpm 会选择最新兼容标签并更新锁文件，再运行 `pnpm build`。
+运行 `pnpm update astro-theme-yinyang` 获取最新提交并更新锁文件，再运行 `pnpm build` 验证站点。

@@ -26,13 +26,11 @@ function build(base: string) {
   pnpm(["build"], consumer, { ...process.env, SITE_BASE: base, SITE_URL: "https://example.com" })
 }
 
-function tagTheme(version: string) {
+function commitTheme(message: string) {
   run("git", ["add", "--all"], upstream)
-  run("git", ["-c", "user.name=YinYang Tests", "-c", "user.email=yinyang@example.com", "-c", "commit.gpgSign=false", "commit", "-m", version], upstream)
-  run("git", ["-c", "tag.gpgSign=false", "tag", "v" + version], upstream)
+  run("git", ["-c", "user.name=YinYang Tests", "-c", "user.email=yinyang@example.com", "-c", "commit.gpgSign=false", "commit", "-m", message], upstream)
 }
 
-const source = (selector: string) => `git+${pathToFileURL(upstream).href}#${selector}`
 const output = (path: string) => readFile(join(consumer, "dist", path), "utf8")
 
 try {
@@ -44,13 +42,15 @@ try {
   const manifest = JSON.parse(await readFile(manifestPath, "utf8"))
   assert.equal(manifest.private, true)
   run("git", ["init", "--initial-branch=main"], upstream)
-  tagTheme(manifest.version)
+  commitTheme("Initial theme")
 
   await cp(join(root, "starter"), consumer, { recursive: true })
-  const siteManifest = JSON.parse(await readFile(join(consumer, "package.json"), "utf8"))
-  const selector = new URL(siteManifest.dependencies[manifest.name]).hash.slice(1)
-  assert.match(selector, /^semver:.+/u)
-  pnpm(["add", source(selector)], consumer)
+  const siteManifestPath = join(consumer, "package.json")
+  const siteManifest = JSON.parse(await readFile(siteManifestPath, "utf8"))
+  const selector = new URL(siteManifest.dependencies[manifest.name]).hash
+  siteManifest.dependencies[manifest.name] = `git+${pathToFileURL(upstream).href}${selector}`
+  await writeFile(siteManifestPath, JSON.stringify(siteManifest))
+  pnpm(["install"], consumer)
   const installedManifest = join(consumer, "node_modules", manifest.name, "package.json")
   assert.equal(JSON.parse(await readFile(installedManifest, "utf8")).version, manifest.version)
   build("/")
@@ -76,15 +76,13 @@ try {
     await writeFile(file, contents)
   }
 
-  // Tag a second version in the fixture repository to exercise a dependency-only upgrade.
-  const [major, minor, patch] = manifest.version.split("-")[0].split(".").map(Number)
-  const nextVersion = `${major}.${minor}.${patch + 1}`
-  await writeFile(manifestPath, JSON.stringify({ ...manifest, version: nextVersion }))
-  tagTheme(nextVersion)
+  const nextDescription = "Updated theme on main"
+  await writeFile(manifestPath, JSON.stringify({ ...manifest, description: nextDescription }))
+  commitTheme("Update theme without changing package version")
   pnpm(["update", manifest.name], consumer)
   build("/my-blog")
 
-  assert.equal(JSON.parse(await readFile(installedManifest, "utf8")).version, nextVersion)
+  assert.equal(JSON.parse(await readFile(installedManifest, "utf8")).description, nextDescription)
   for (const [path, contents] of Object.entries(filesToKeep)) assert.deepEqual(await readFile(join(consumer, path)), Buffer.from(contents), path)
   const article = await output("posts/nested/mine/index.html")
   assert.match(await output("index.html"), /我的独立博客/u)
@@ -96,7 +94,7 @@ try {
   assert.match(await output("404.html"), /href="\/my-blog\/logo\.png"/u)
   assert.match(await output("sitemap.xml"), /https:\/\/example\.com\/my-blog\/posts\/nested\/mine\//u)
   assert.deepEqual(await readdir(join(consumer, "dist/posts")), ["nested"])
-  console.log("Theme installed and upgraded from Git tags in a standalone site. Root and subpath builds passed.")
+  console.log("Theme installed and updated from main without tags. Root and subpath builds passed.")
 } finally {
   assert.equal(dirname(temp), resolve(tmpdir()))
   await rm(temp, { recursive: true, force: true })

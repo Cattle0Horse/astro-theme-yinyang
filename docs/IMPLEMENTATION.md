@@ -37,7 +37,7 @@
 
 ## 主题包与站点模板
 
-`astro-theme-yinyang` 提供 integration 和集合定义。主题仓库的演示站和 `starter/` 共用这两处入口。模板通过 GitHub Git SemVer 范围安装主题，运行 `pnpm update astro-theme-yinyang` 时选择最新兼容标签。`package.json` 的 `files` 声明主题包所需源码。分发验证覆盖从 Git SemVer 标签安装、子路径构建以及更新主题后的用户文件完整性。
+`astro-theme-yinyang` 提供 integration 和集合定义。主题仓库的演示站和 `starter/` 共用这两处入口。创建站点和安装主题依赖都使用 GitHub 的 `main` 分支。运行 `pnpm update astro-theme-yinyang` 时，pnpm 将锁文件更新到分支的最新提交。`package.json` 的 `files` 声明主题包所需源码。分发验证覆盖从无标签的 `main` 安装、子路径构建以及更新主题后的用户文件完整性。
 
 ## 互动 404
 
