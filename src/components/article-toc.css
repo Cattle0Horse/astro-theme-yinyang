@@ -26,6 +26,7 @@
 }
 .toc-links a {
   color: var(--secondary-ink);
+  cursor: pointer;
   display: flex;
   align-items: center;
   min-height: 24px;

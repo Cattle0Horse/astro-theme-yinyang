@@ -872,22 +872,27 @@ test("TOC scrolls the article smoothly and hides its own scrollbar after use", a
   await expect(page).toHaveURL(new RegExp(encodeURIComponent("化学式") + "$", "u"))
 })
 
-test("desktop TOC updates the fragment at once and keeps the sidebar still on the way to a distant heading", async ({ page }) => {
+test("desktop TOC keeps tracking visible headings during a jump without moving the list under the pointer", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 620 })
   const articleLink = "/posts/csapp/2-representation-and-processing-of-information/"
   await page.goto(articleLink)
   const toc = page.getByRole("navigation", { name: "文章目录" })
   const destination = toc.getByRole("link").last()
-  await destination.scrollIntoViewIfNeeded()
-  const result = await destination.evaluate(async (link) => {
+  await destination.hover()
+  const { x, y, width, height } = (await destination.boundingBox())!
+  const pointer = { x: x + width / 2, y: y + height / 2 }
+  const result = await destination.evaluate(async (link, pointer) => {
     if (!(link instanceof HTMLAnchorElement)) throw new Error("Expected a heading link")
     const list = link.closest("ol")!
+    const indicator = list.querySelector(".toc-indicator")!
     const start = list.scrollTop
     const image = Array.from(document.images).find((image) => image.closest(".reading") && image.complete && image.naturalWidth)
     if (!image) throw new Error("Expected a loaded article image")
     link.click()
     const fragmentUpdated = location.hash === link.hash
     const positions = new Set<number>()
+    const indicatorPositions = new Set<number>()
+    const cursors = new Set<string>()
     let imageStayedVisible = true
     const until = performance.now() + 1200
     while (performance.now() < until) {
@@ -895,14 +900,40 @@ test("desktop TOC updates the fragment at once and keeps the sidebar still on th
       const { top } = document.getElementById(decodeURIComponent(link.hash.slice(1)))!.getBoundingClientRect()
       if (top < innerHeight) break
       positions.add(list.scrollTop)
+      indicatorPositions.add(indicator.getBoundingClientRect().top)
+      const hit = document.elementFromPoint(pointer.x, pointer.y)!
+      cursors.add(getComputedStyle(hit).cursor)
       imageStayedVisible &&= image.checkVisibility({ opacityProperty: true, visibilityProperty: true })
     }
-    return { fragmentUpdated, positions: [...positions], start, imageStayedVisible }
-  })
+    return { fragmentUpdated, positions: [...positions], indicatorPositions: indicatorPositions.size, cursors: [...cursors], start, imageStayedVisible }
+  }, pointer)
   expect(result.fragmentUpdated).toBe(true)
   expect(result.positions).toEqual([result.start])
+  expect(result.indicatorPositions).toBeGreaterThan(2)
+  expect(result.cursors).toEqual(["pointer"])
   expect(result.imageStayedVisible).toBe(true)
   await expect(destination).toHaveAttribute("aria-current", "location")
+})
+
+test("clicking another TOC link reverses a scroll in progress from the current position", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 800 })
+  await page.goto("/posts/math-demo/")
+  const toc = page.getByRole("navigation", { name: "文章目录" })
+  const down = toc.getByRole("link", { name: "化学式", exact: true })
+  const up = toc.getByRole("link").first()
+  const nextHash = await up.getAttribute("href")
+  await down.click()
+  await page.waitForFunction(() => scrollY > 650)
+  await up.hover()
+  await page.mouse.down()
+  const start = await page.evaluate(() => scrollY)
+  await page.waitForFunction((start) => scrollY > start + 10, start)
+  await page.mouse.up()
+  await expect(page).toHaveURL((url) => url.hash === nextHash)
+  const reversal = await page.evaluate(() => scrollY)
+  expect(reversal).toBeGreaterThan(start)
+  await expect.poll(() => page.evaluate(() => scrollY)).toBeLessThan(reversal - 200)
+  await expect(up).toHaveAttribute("aria-current", "location")
 })
 
 test("heading fragments point to their destination and replay after another activation", async ({ page }) => {

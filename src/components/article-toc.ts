@@ -74,7 +74,7 @@ function mountToc(mobile: HTMLElement, article: HTMLElement) {
   const scroller = sidebar?.querySelector<HTMLElement>("[data-toc-scroll]") ?? null
   const links = [...(scroller?.querySelectorAll<HTMLAnchorElement>("a[href^='#']") ?? [])]
   const indicator = scroller?.querySelector<HTMLElement>(".toc-indicator")
-  let previous = ""
+  let revealedHeading = ""
   const headingsByPosition = links.flatMap((link) => {
     let id: string
     try {
@@ -87,7 +87,7 @@ function mountToc(mobile: HTMLElement, article: HTMLElement) {
   })
   const refreshHeading = () => {
     frame = 0
-    if (!headingsByPosition.length || document.documentElement.hasAttribute("data-reading-scroll")) return
+    if (!headingsByPosition.length) return
     const positions = headingsByPosition.map(({ element }) => element.getBoundingClientRect().top)
     let index = 0
     for (let i = 0; i < positions.length && positions[i] <= 66; i++) index = i
@@ -114,9 +114,11 @@ function mountToc(mobile: HTMLElement, article: HTMLElement) {
       const top = first.getBoundingClientRect().top
       indicator.style.top = top - scroller.getBoundingClientRect().top + scroller.scrollTop + "px"
       indicator.style.height = last.getBoundingClientRect().bottom - top + "px"
-      if (previous !== active) revealTocItem(scroller, headingsByPosition[index].link.parentElement)
+      if (revealedHeading !== active && !root.hasAttribute("data-reading-scroll")) {
+        revealTocItem(scroller, headingsByPosition[index].link.parentElement)
+        revealedHeading = active
+      }
     }
-    previous = active
   }
   const schedule = () => {
     if (!frame) frame = requestAnimationFrame(refreshHeading)

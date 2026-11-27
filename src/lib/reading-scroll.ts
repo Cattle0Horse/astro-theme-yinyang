@@ -1,4 +1,4 @@
-let cancelScroll: (() => void) | undefined
+let cancelScroll: ((replaced?: boolean) => void) | undefined
 
 type ReadingPosition = "start" | "center" | number
 
@@ -8,7 +8,7 @@ export function scrollToReadingTarget(event: MouseEvent, link: HTMLAnchorElement
 }
 
 export function scrollToReadingPosition(target: HTMLElement, align: ReadingPosition, arrived?: () => void, link?: HTMLAnchorElement) {
-  cancelScroll?.()
+  cancelScroll?.(true)
   const root = document.documentElement
   if (link && link.hash !== location.hash) {
     const state = { ...history.state, scrollX, scrollY }
@@ -22,11 +22,15 @@ export function scrollToReadingPosition(target: HTMLElement, align: ReadingPosit
   let frame = requestAnimationFrame(start)
 
   function stop() {
+    finish()
+  }
+
+  function finish(replaced = false) {
     cancelAnimationFrame(frame)
     controller.abort()
-    if (cancelScroll === stop) {
+    if (cancelScroll === finish) {
       cancelScroll = undefined
-      if (root.hasAttribute("data-reading-scroll")) {
+      if (!replaced && root.hasAttribute("data-reading-scroll")) {
         root.removeAttribute("data-reading-scroll")
         document.dispatchEvent(new Event("yinyang:reading-scroll-end"))
       }
@@ -68,9 +72,23 @@ export function scrollToReadingPosition(target: HTMLElement, align: ReadingPosit
     frame = requestAnimationFrame(step)
   }
 
-  cancelScroll = stop
+  cancelScroll = finish
   const { signal } = controller
-  for (const type of ["wheel", "touchstart", "pointerdown", "keydown"]) window.addEventListener(type, stop, { passive: true, signal })
+  for (const type of ["wheel", "touchmove"]) window.addEventListener(type, stop, { passive: true, signal })
+  window.addEventListener(
+    "pointerdown",
+    (event) => {
+      if (!(event.target instanceof Element && event.target.closest("a[href]"))) stop()
+    },
+    { passive: true, signal }
+  )
+  window.addEventListener(
+    "keydown",
+    (event) => {
+      if (!(event.key === "Enter" && event.target instanceof Element && event.target.closest("a[href]"))) stop()
+    },
+    { signal }
+  )
   document.addEventListener("astro:before-swap", stop, { signal })
   window.addEventListener(
     "popstate",
