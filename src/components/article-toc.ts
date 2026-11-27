@@ -75,6 +75,7 @@ function mountToc(mobile: HTMLElement, article: HTMLElement) {
   const links = [...(scroller?.querySelectorAll<HTMLAnchorElement>("a[href^='#']") ?? [])]
   const indicator = scroller?.querySelector<HTMLElement>(".toc-indicator")
   let revealedHeading = ""
+  let pointerOverList = false
   const headingsByPosition = links.flatMap((link) => {
     let id: string
     try {
@@ -114,7 +115,7 @@ function mountToc(mobile: HTMLElement, article: HTMLElement) {
       const top = first.getBoundingClientRect().top
       indicator.style.top = top - scroller.getBoundingClientRect().top + scroller.scrollTop + "px"
       indicator.style.height = last.getBoundingClientRect().bottom - top + "px"
-      if (revealedHeading !== active && !root.hasAttribute("data-reading-scroll")) {
+      if (revealedHeading !== active && !pointerOverList && !root.hasAttribute("data-reading-scroll")) {
         revealTocItem(scroller, headingsByPosition[index].link.parentElement)
         revealedHeading = active
       }
@@ -131,6 +132,21 @@ function mountToc(mobile: HTMLElement, article: HTMLElement) {
     schedule()
   }
   if (headingsByPosition.length) {
+    scroller?.addEventListener(
+      "pointerenter",
+      (event) => {
+        pointerOverList = event.pointerType !== "touch"
+      },
+      { signal }
+    )
+    scroller?.addEventListener(
+      "pointerleave",
+      () => {
+        pointerOverList = false
+        schedule()
+      },
+      { signal }
+    )
     wide.addEventListener("change", onWide, { signal })
     refreshHeading()
     window.addEventListener("scroll", schedule, { passive: true, signal })

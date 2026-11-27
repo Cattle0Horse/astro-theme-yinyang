@@ -873,13 +873,15 @@ test("TOC scrolls the article smoothly and hides its own scrollbar after use", a
 })
 
 test("desktop TOC keeps tracking visible headings during a jump without moving the list under the pointer", async ({ page }) => {
-  await page.setViewportSize({ width: 1440, height: 620 })
+  await page.setViewportSize({ width: 1440, height: 400 })
   const articleLink = "/posts/csapp/2-representation-and-processing-of-information/"
   await page.goto(articleLink)
   const toc = page.getByRole("navigation", { name: "文章目录" })
   const destination = toc.getByRole("link").last()
-  await destination.hover()
-  const { x, y, width, height } = (await destination.boundingBox())!
+  const hovered = toc.getByRole("link").first()
+  await hovered.hover()
+  await expect(destination).not.toBeInViewport()
+  const { x, y, width, height } = (await hovered.boundingBox())!
   const pointer = { x: x + width / 2, y: y + height / 2 }
   const result = await destination.evaluate(async (link, pointer) => {
     if (!(link instanceof HTMLAnchorElement)) throw new Error("Expected a heading link")
@@ -897,8 +899,6 @@ test("desktop TOC keeps tracking visible headings during a jump without moving t
     const until = performance.now() + 1200
     while (performance.now() < until) {
       await new Promise(requestAnimationFrame)
-      const { top } = document.getElementById(decodeURIComponent(link.hash.slice(1)))!.getBoundingClientRect()
-      if (top < innerHeight) break
       positions.add(list.scrollTop)
       indicatorPositions.add(indicator.getBoundingClientRect().top)
       const hit = document.elementFromPoint(pointer.x, pointer.y)!
@@ -913,6 +913,9 @@ test("desktop TOC keeps tracking visible headings during a jump without moving t
   expect(result.cursors).toEqual(["pointer"])
   expect(result.imageStayedVisible).toBe(true)
   await expect(destination).toHaveAttribute("aria-current", "location")
+  await expect(hovered).toBeInViewport()
+  await page.mouse.move(700, 5)
+  await expect(destination).toBeInViewport()
 })
 
 test("clicking another TOC link reverses a scroll in progress from the current position", async ({ page }) => {
@@ -925,6 +928,24 @@ test("clicking another TOC link reverses a scroll in progress from the current p
   await down.click()
   await page.waitForFunction(() => scrollY > 650)
   await up.hover()
+  await up.evaluate((link) => {
+    link.addEventListener(
+      "click",
+      () => {
+        const start = scrollY
+        let furthest = start
+
+        function sample() {
+          furthest = Math.max(furthest, scrollY)
+          if (scrollY < start) link.setAttribute("data-forward-after-click", String(furthest - start))
+          else requestAnimationFrame(sample)
+        }
+
+        requestAnimationFrame(sample)
+      },
+      { once: true }
+    )
+  })
   await page.mouse.down()
   const start = await page.evaluate(() => scrollY)
   await page.waitForFunction((start) => scrollY > start + 10, start)
@@ -933,6 +954,7 @@ test("clicking another TOC link reverses a scroll in progress from the current p
   const reversal = await page.evaluate(() => scrollY)
   expect(reversal).toBeGreaterThan(start)
   await expect.poll(() => page.evaluate(() => scrollY)).toBeLessThan(reversal - 200)
+  expect(Number(await up.getAttribute("data-forward-after-click"))).toBeGreaterThan(12)
   await expect(up).toHaveAttribute("aria-current", "location")
 })
 
