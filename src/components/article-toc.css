@@ -56,16 +56,16 @@
 }
 .toc-desktop .toc-indicator {
   position: absolute;
+  inset-block-start: 0;
   inset-inline-start: 0.5px;
   width: 2px;
+  height: 1px;
   border-radius: 1px;
   background: var(--accent);
   pointer-events: none;
   transform-origin: top;
   visibility: hidden;
-  transition:
-    top 240ms ease,
-    height 240ms ease;
+  transition: transform 240ms ease;
 }
 .toc-desktop .toc-indicator[data-toc-active] {
   visibility: visible;

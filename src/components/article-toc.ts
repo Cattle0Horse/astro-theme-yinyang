@@ -76,6 +76,10 @@ function mountToc(mobile: HTMLElement, article: HTMLElement) {
   const indicator = scroller?.querySelector<HTMLElement>(".toc-indicator")
   let revealedHeading = ""
   let pointerOverList = false
+  let activeIndex = -1
+  let firstVisible = -1
+  let lastVisible = -1
+  let indicatorTransform = ""
   const headingsByPosition = links.flatMap((link) => {
     let id: string
     try {
@@ -89,37 +93,67 @@ function mountToc(mobile: HTMLElement, article: HTMLElement) {
   const refreshHeading = () => {
     frame = 0
     if (!headingsByPosition.length) return
-    const positions = headingsByPosition.map(({ element }) => element.getBoundingClientRect().top)
-    let index = 0
-    for (let i = 0; i < positions.length && positions[i] <= 66; i++) index = i
+
+    function boundary(edge: number, includeEdge: boolean) {
+      let low = 0
+      let high = headingsByPosition.length
+      while (low < high) {
+        const middle = (low + high) >>> 1
+        const top = headingsByPosition[middle].element.getBoundingClientRect().top
+        if (top < edge || (includeEdge && top === edge)) low = middle + 1
+        else high = middle
+      }
+      return low
+    }
+
     const root = document.documentElement
     const readingY = lockedScroll ?? scrollY
-    if (lockedScroll === null && readingY + root.clientHeight >= root.scrollHeight - 2) index = positions.length - 1
+    const atBottom = lockedScroll === null && readingY + root.clientHeight >= root.scrollHeight - 2
+    const index = atBottom ? headingsByPosition.length - 1 : Math.max(0, boundary(66, true) - 1)
     const active = headingsByPosition[index].slug
-    for (const link of mobileLinks) {
-      if (link.hash === active) link.setAttribute("aria-current", "location")
-      else link.removeAttribute("aria-current")
-    }
-    const visible: HTMLAnchorElement[] = []
-    for (const [i, { link }] of headingsByPosition.entries()) {
-      if (i === index) link.setAttribute("aria-current", "location")
-      else link.removeAttribute("aria-current")
-      const inView = wide.matches && positions[i] < innerHeight && (positions[i + 1] ?? Infinity) > 0
-      link.toggleAttribute("data-toc-visible", inView)
-      if (inView) visible.push(link)
-    }
-    const first = visible[0]?.parentElement
-    const last = visible.at(-1)?.parentElement
-    indicator?.toggleAttribute("data-toc-active", Boolean(first))
-    if (indicator && scroller && first && last) {
-      const top = first.getBoundingClientRect().top
-      indicator.style.top = top - scroller.getBoundingClientRect().top + scroller.scrollTop + "px"
-      indicator.style.height = last.getBoundingClientRect().bottom - top + "px"
+    const last = wide.matches ? boundary(innerHeight, false) - 1 : -1
+    const first = last >= 0 ? Math.max(0, boundary(0, true) - 1) : -1
+    const start = headingsByPosition[first]?.link.parentElement
+    const end = headingsByPosition[last]?.link.parentElement
+    let transform = ""
+    let revealAt: number | undefined
+    if (indicator && scroller && start && end) {
+      const bounds = scroller.getBoundingClientRect()
+      const top = start.getBoundingClientRect().top
+      const bottom = end.getBoundingClientRect().bottom
+      const scrollTop = scroller.scrollTop
+      transform = `translateY(${top - bounds.top + scrollTop}px) scaleY(${bottom - top})`
       if (revealedHeading !== active && !pointerOverList && !root.hasAttribute("data-reading-scroll")) {
-        revealTocItem(scroller, headingsByPosition[index].link.parentElement)
+        const item = headingsByPosition[index].link.parentElement?.getBoundingClientRect()
+        if (item && (item.top < bounds.top || item.bottom > bounds.bottom)) revealAt = scrollTop + item.top - bounds.top - 8
         revealedHeading = active
       }
     }
+    if (index !== activeIndex) {
+      headingsByPosition[activeIndex]?.link.removeAttribute("aria-current")
+      headingsByPosition[index].link.setAttribute("aria-current", "location")
+      for (const link of mobileLinks) {
+        if (link.hash === active) link.setAttribute("aria-current", "location")
+        else link.removeAttribute("aria-current")
+      }
+      activeIndex = index
+    }
+    if (first !== firstVisible || last !== lastVisible) {
+      for (let i = Math.max(0, firstVisible); i <= lastVisible; i++) {
+        if (i < first || i > last) headingsByPosition[i].link.removeAttribute("data-toc-visible")
+      }
+      for (let i = Math.max(0, first); i <= last; i++) {
+        if (i < firstVisible || i > lastVisible) headingsByPosition[i].link.setAttribute("data-toc-visible", "")
+      }
+      firstVisible = first
+      lastVisible = last
+    }
+    indicator?.toggleAttribute("data-toc-active", Boolean(transform))
+    if (indicator && indicatorTransform !== transform) {
+      indicator.style.transform = transform
+      indicatorTransform = transform
+    }
+    if (scroller && revealAt !== undefined) scroller.scrollTop = revealAt
   }
   const schedule = () => {
     if (!frame) frame = requestAnimationFrame(refreshHeading)

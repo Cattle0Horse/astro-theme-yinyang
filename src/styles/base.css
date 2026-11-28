@@ -187,6 +187,8 @@ html {
   scrollbar-gutter: stable;
 }
 body {
+  /* Keep the viewport scrollbar transition from restyling the reading tree each frame. */
+  scrollbar-color: auto;
   background: var(--paper);
   color: var(--ink);
   font: var(--fs-body)/1.65 var(--ui-font);
