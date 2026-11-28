@@ -14,6 +14,7 @@
 - TypeScript 使用 Astro 的 `strict` 配置。优先从 schema 和现有类型推导。front matter、配置、DOM 和浏览器存储的数据在进入业务逻辑前校验，组件接收已规范化的值。
 - JSX 用于 React 组件，页面入口与静态内容用 `.astro`。先用静态 HTML、原生控件和 CSS 完成基础行为，再按需 hydrate。客户端组件只接收所需数据。状态就近管理，事件处理器表达用户操作，effects 负责外部订阅并在卸载时清理。
 - 采用 Astro 提供的静态路由和导航能力。浏览器提供普通链接、锚点和滚动的基础行为。客户端路由的补充逻辑按已验证的体验需求增加，覆盖首次访问、前进后退和快速换页。
+- `entry-transition.ts` 协调查找目标页和换页生命周期，`entry-motion.ts` 管理快照和动画。阅读锚点与 Astro 历史状态由 `reading-history.ts` 同步，滚动动画由 `reading-scroll.ts` 管理。历史遍历中断滚动时，会保留离开前最后一次滚动位置。
 
 ## 内容与发布
 

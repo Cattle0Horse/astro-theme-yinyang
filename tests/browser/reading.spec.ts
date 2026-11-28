@@ -986,6 +986,35 @@ test("rapid TOC changes keep their fragments and restore the last settled readin
   await expect.poll(() => page.evaluate(() => scrollY)).toBe(settled)
 })
 
+test("forward restores the reading position when back interrupts a chapter jump", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 850 })
+  await page.goto("/posts/math-demo/")
+  const link = page.getByRole("navigation", { name: "文章目录" }).getByRole("link", { name: "分段函数", exact: true })
+  const fragment = await link.getAttribute("href")
+  const position = await link.evaluate(
+    (link) =>
+      new Promise<number>((resolve) => {
+        if (!(link instanceof HTMLAnchorElement)) throw new Error("Expected a heading link")
+
+        function goBack() {
+          if (scrollY < 500) return
+          document.removeEventListener("scroll", goBack)
+          resolve(scrollY)
+          history.back()
+        }
+
+        document.addEventListener("scroll", goBack, { passive: true })
+        link.click()
+      })
+  )
+  await expect(page).toHaveURL((url) => !url.hash)
+  await page.goForward()
+  await expect(page).toHaveURL((url) => url.hash === fragment)
+  const restored = () => page.evaluate(() => scrollY)
+  await expect.poll(restored).toBeGreaterThanOrEqual(position)
+  expect(await restored()).toBeLessThan(1000)
+})
+
 test("heading fragments point to their destination and replay after another activation", async ({ page }) => {
   const id = "表达与结构"
   const fragment = "#" + encodeURIComponent(id)

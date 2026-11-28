@@ -1,3 +1,5 @@
+import { pushReadingFragment, trackReadingHistory } from "./reading-history"
+
 let cancelScroll: ((replaced?: boolean) => number) | undefined
 
 type ReadingPosition = "start" | "center" | number
@@ -12,16 +14,9 @@ export function scrollToReadingPosition(target: HTMLElement, align: ReadingPosit
   const requestedAt = performance.now()
   let velocity = incomingVelocity
   const root = document.documentElement
-  if (link && link.hash !== location.hash) {
-    const state = { ...history.state, scrollX, scrollY }
-    history.replaceState(state, "")
-    const next = { ...state, index: (state.index ?? 0) + 1 }
-    history.pushState(next, "", link.href)
-    // Synchronize Astro without letting the browser jump to the new fragment.
-    window.dispatchEvent(new PopStateEvent("popstate", { state: next }))
-  }
-  const historyIndex = history.state?.index
+  if (link) pushReadingFragment(link)
   const controller = new AbortController()
+  const readingHistory = trackReadingHistory(controller.signal, stop)
   let frame = requestAnimationFrame(start)
 
   function stop() {
@@ -35,10 +30,7 @@ export function scrollToReadingPosition(target: HTMLElement, align: ReadingPosit
       cancelScroll = undefined
       if (!replaced && root.hasAttribute("data-reading-scroll")) {
         root.removeAttribute("data-reading-scroll")
-        const state = history.state
-        if (state?.index === historyIndex && state && (state.scrollX !== scrollX || state.scrollY !== scrollY)) {
-          history.replaceState({ ...state, scrollX, scrollY }, "")
-        }
+        readingHistory.save()
         document.dispatchEvent(new Event("yinyang:reading-scroll-end"))
       }
     }
@@ -64,7 +56,7 @@ export function scrollToReadingPosition(target: HTMLElement, align: ReadingPosit
       arrived?.()
       return
     }
-    root.setAttribute("data-reading-scroll", "")
+    root.toggleAttribute("data-reading-scroll", true)
     const duration = Math.min(900, 280 + Math.sqrt(Math.abs(distance)) * 10)
     const sameDirection = distance * incomingVelocity > 0
     // Carry the previous velocity across the handoff, then dissipate it over a short distance.
@@ -82,6 +74,7 @@ export function scrollToReadingPosition(target: HTMLElement, align: ReadingPosit
       const easeVelocity = (30 * progress ** 2 * (1 - progress) ** 2) / duration
       velocity = desired < 0 || desired > maxScroll ? 0 : incomingVelocity * remainingVelocity * (1 - eased) + (distance - carried) * easeVelocity
       window.scrollTo({ top: desired, behavior: "instant" })
+      readingHistory.record()
       if (progress < 1) frame = requestAnimationFrame(step)
       else {
         stop()
@@ -94,14 +87,6 @@ export function scrollToReadingPosition(target: HTMLElement, align: ReadingPosit
 
   cancelScroll = finish
   const { signal } = controller
-  window.addEventListener(
-    "scrollend",
-    (event) => {
-      // Each instant step can emit scrollend. Astro only needs the final position.
-      if (event.target === document && root.hasAttribute("data-reading-scroll")) event.stopImmediatePropagation()
-    },
-    { capture: true, signal }
-  )
   for (const type of ["wheel", "touchmove"]) window.addEventListener(type, stop, { passive: true, signal })
   window.addEventListener(
     "pointerdown",
@@ -118,12 +103,5 @@ export function scrollToReadingPosition(target: HTMLElement, align: ReadingPosit
     { signal }
   )
   document.addEventListener("astro:before-swap", stop, { signal })
-  window.addEventListener(
-    "popstate",
-    (event) => {
-      if (event.isTrusted) stop()
-    },
-    { signal }
-  )
   return stop
 }
