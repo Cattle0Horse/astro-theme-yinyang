@@ -51,8 +51,8 @@ export async function staticFiles() {
     if (!entry.filePath) continue
     const source = resolve(entry.filePath)
     if (site.originalMarkdown) add(entry, "index.md", { file: source })
-    const { remarkPluginFrontmatter } = await render(entry)
-    const references: unknown = remarkPluginFrontmatter.assetReferences
+    const metadata = entry.rendered?.metadata?.frontmatter
+    const references = metadata && typeof metadata === "object" && "assetReferences" in metadata ? metadata.assetReferences : (await render(entry)).remarkPluginFrontmatter.assetReferences
     for (const href of [...(Array.isArray(references) ? references : []), entry.data.cover]) {
       if (!isRelativeResource(href)) continue
       const asset = await localAttachment(source, href)

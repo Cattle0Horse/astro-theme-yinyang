@@ -5,7 +5,20 @@ export type Section = "posts" | "notes"
 
 export type Entry = CollectionEntry<Section>
 
-export async function published<T extends Section>(section: T) {
+const publishedBySection = new Map<Section, Promise<Entry[]>>()
+
+export function published<T extends Section>(section: T): Promise<CollectionEntry<T>[]>
+
+export function published(section: Section) {
+  if (import.meta.env.DEV) return loadPublished(section)
+  const cached = publishedBySection.get(section)
+  if (cached) return cached
+  const entries = loadPublished(section)
+  publishedBySection.set(section, entries)
+  return entries
+}
+
+async function loadPublished(section: Section) {
   const entries = await getCollection(section, ({ data }) => !data.draft)
   return entries.sort((a, b) => Date.parse(b.data.date) - Date.parse(a.data.date) || b.id.localeCompare(a.id))
 }

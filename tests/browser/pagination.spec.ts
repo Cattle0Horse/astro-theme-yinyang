@@ -16,3 +16,17 @@ test("Notes and its example tag link to later pages and back", async ({ page }) 
     await expect(next).toHaveAttribute("href", root + "page/2/")
   }
 })
+
+test("legacy first-page URLs resolve to the canonical Notes listings without JavaScript", async ({ browser, baseURL }) => {
+  const context = await browser.newContext({ baseURL, javaScriptEnabled: false })
+  try {
+    const page = await context.newPage()
+    for (const root of ["/notes/", "/notes/tags/" + encodeURIComponent("分页示例") + "/"]) {
+      await page.goto(root + "page/1/")
+      await expect(page).toHaveURL((url) => url.pathname === root)
+      await expect(page.locator(".note-entry").first()).toBeVisible()
+    }
+  } finally {
+    await context.close()
+  }
+})

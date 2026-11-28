@@ -1,12 +1,14 @@
 ---
 import NoteListing from "../../../components/NoteListing.astro"
 import { published } from "../../../lib/content"
+import { basePath } from "../../../lib/content-format"
 import { site } from "../../../site.config"
 import type { GetStaticPaths } from "astro"
 
 export const getStaticPaths = (async ({ paginate }) => paginate(await published("notes"), { pageSize: site.postsPerPage })) satisfies GetStaticPaths
 
 const { page } = Astro.props
+if (page.currentPage === 1) return Astro.redirect(basePath("notes/"), 301)
 ---
 
 <NoteListing title="Notes" entries={page.data} current={page.currentPage} total={page.lastPage} />

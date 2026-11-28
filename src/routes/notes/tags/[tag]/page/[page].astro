@@ -8,6 +8,8 @@ export const getStaticPaths = (async ({ paginate }) =>
   tagsFor(await published("notes")).flatMap(({ id, label, entries }) => paginate(entries, { params: { tag: id }, props: { label }, pageSize: site.postsPerPage }))) satisfies GetStaticPaths
 
 const { label, page } = Astro.props
+const root = tagsPath("notes", Astro.params.tag)
+if (page.currentPage === 1) return Astro.redirect(encodeURI(root), 301)
 ---
 
-<NoteListing title={"#" + label} entries={page.data} root={tagsPath("notes", Astro.params.tag)} current={page.currentPage} total={page.lastPage} />
+<NoteListing title={"#" + label} entries={page.data} root={root} current={page.currentPage} total={page.lastPage} />
