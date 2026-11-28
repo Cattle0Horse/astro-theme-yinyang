@@ -1,0 +1,36 @@
+---
+import { ALargeSmall, Moon, Sun, Monitor } from "lucide-react"
+import type { Appearance as Preference } from "../lib/appearance"
+import { IconButton } from "./ui/IconButton"
+
+interface Props {
+  initial: Preference
+  palettes: readonly { id: string; name: string }[]
+}
+
+const { initial, palettes } = Astro.props
+---
+
+<div class="appearance" data-enhancement>
+  <IconButton label="明暗模式：跟随系统" disabled data-appearance-mode>
+    <Sun data-mode-icon="light" aria-hidden="true" />
+    <Moon data-mode-icon="dark" aria-hidden="true" />
+    <Monitor data-mode-icon="system" aria-hidden="true" />
+  </IconButton>
+  <IconButton label="选择主题色" className="palette-toggle" popoverTarget="palette-menu" disabled />
+  <div id="palette-menu" class="appearance-menu palette-menu" role="group" aria-label="主题色" popover="auto">
+    {palettes.map(({ id, name }) => (
+      <button class="palette-option" type="button" data-swatch={id} data-tooltip={name} aria-label={name} aria-pressed={initial.palette === id ? "true" : "false"}></button>
+    ))}
+  </div>
+  <IconButton label="调整字号" popoverTarget="font-menu" disabled>
+    <ALargeSmall aria-hidden="true" />
+  </IconButton>
+  <div id="font-menu" class="appearance-menu font-menu" role="group" aria-label="字号" popover="auto">
+    <input type="range" min="14" max="18" step="1" aria-label="全站字号" value={initial.size} />
+  </div>
+</div>
+
+<script>
+  import "./appearance-controls"
+</script>

@@ -1,5 +1,5 @@
 ---
-import Appearance from "./Appearance"
+import Appearance from "./Appearance.astro"
 import { site } from "../site.config"
 import { basePath } from "../lib/content-format"
 import { ChevronDown, House, NotebookPen, Rss, Tags } from "lucide-react"
@@ -29,7 +29,7 @@ const currentLabel = links.find(({ current }) => current)?.label ?? "导航"
   </a>
   <p class="site-description">{site.description}</p>
   <div class="header-row flex items-center justify-between">
-    <Appearance initial={initial} palettes={site.palettes} client:load />
+    <Appearance initial={initial} palettes={site.palettes} />
     <nav aria-label="主导航" class="header-desktop flex shrink-0 flex-wrap justify-end" transition:persist="desktop-navigation">
       {links.map(({ href, label, icon: Icon, current }) => (
         <a href={href} class="header-link" aria-current={current}>

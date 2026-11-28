@@ -19,7 +19,7 @@ const numbered = (page: number) => (page === 1 ? root : root + "page/" + page + 
 const notes = await Promise.all(entries.map(async (entry) => ({ entry, rendered: await renderEntry(entry) })))
 ---
 
-<SiteLayout title={title} hasKatex={notes.some(({ rendered }) => rendered.hasKatex)}>
+<SiteLayout title={title} hasReading={notes.length > 0} hasKatex={notes.some(({ rendered }) => rendered.hasKatex)}>
   <section class="shell">
     <h1 class="section-title">{title}</h1>
     <Timeline entries={notes} />

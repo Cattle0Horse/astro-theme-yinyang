@@ -1,7 +1,7 @@
 ---
 import { ClientRouter } from "astro:transitions"
 import SiteHeader from "../components/SiteHeader.astro"
-import Tooltip from "../components/Tooltip"
+import MathSelection from "../components/MathSelection.astro"
 import { site } from "../site.config"
 import { basePath } from "../lib/content-format"
 import { startAppearance } from "../lib/appearance"
@@ -17,9 +17,10 @@ interface Props {
   article?: boolean
   notFound?: boolean
   hasKatex?: boolean
+  hasReading?: boolean
 }
 
-const { title = site.title, description = site.description, image, article = false, notFound = false, hasKatex = false } = Astro.props
+const { title = site.title, description = site.description, image, article = false, notFound = false, hasKatex = false, hasReading = article } = Astro.props
 const canonical = new URL(Astro.url.pathname, Astro.site)
 const fullTitle = title === site.title ? title : title + " · " + site.title
 const initial = { mode: "system", palette: site.defaultPalette, size: 15 } satisfies Appearance
@@ -53,7 +54,7 @@ const contentMotion = {
     <meta name="description" content={description} />
     <link rel="icon" href={basePath(site.favicon)} />
     {hasKatex && <link rel="stylesheet" href={katexStyles} />}
-    <link rel="stylesheet" href={proseFont} media="print" onload="this.removeAttribute('media')" />
+    {hasReading && <link rel="stylesheet" href={proseFont} media="print" onload="this.removeAttribute('media')" />}
     {notFound ? <meta name="robots" content="noindex" /> : <link rel="canonical" href={canonical.href} />}
     <meta property="og:title" content={fullTitle} />
     <meta property="og:description" content={description} />
@@ -66,7 +67,7 @@ const contentMotion = {
     <script is:inline type="application/ld+json" set:html={jsonLd}></script>
     <ClientRouter />
     <noscript>
-      <link rel="stylesheet" href={proseFont} />
+      {hasReading && <link rel="stylesheet" href={proseFont} />}
       <style>
         [data-enhancement] {
           display: none !important;
@@ -79,7 +80,6 @@ const contentMotion = {
       跳到内容
     </a>
     <SiteHeader initial={initial} />
-    <Tooltip client:load />
     <div class="navigation-loading" role="status" aria-live="polite" transition:persist="navigation-loading">
       <span class="navigation-progress" aria-hidden="true"></span>
       <span class="navigation-loading-label">
@@ -89,6 +89,7 @@ const contentMotion = {
     <main id="main" transition:name="reading-content" transition:animate={{ forwards: contentMotion, backwards: contentMotion }}>
       <slot />
     </main>
+    {hasKatex && <MathSelection />}
   </body>
 </html>
 
@@ -96,14 +97,14 @@ const contentMotion = {
   import "../lib/entry-transition"
   import "../lib/footnote-feedback"
   import "../lib/link-underline"
-  import "../lib/math-selection"
+  import "../components/tooltip"
 
   const root = document.documentElement
   const timers = new Map<HTMLElement, number>()
   let nearEdge: HTMLElement | null = null
 
   function showScrollbar(element: HTMLElement) {
-    element.setAttribute("data-scrollbar-visible", "")
+    element.toggleAttribute("data-scrollbar-visible", true)
     window.clearTimeout(timers.get(element))
     timers.delete(element)
     if (nearEdge !== element) {
