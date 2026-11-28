@@ -383,9 +383,7 @@ export function enhanceSidenotes(article: HTMLElement) {
   document.addEventListener("astro:before-swap", closeBeforeSwap)
   window.addEventListener("hashchange", closeOnFragmentChange)
   for (const event of ["pointerover", "pointerout", "focusin", "focusout"] as const) article.addEventListener(event, track)
-  const dispose = () => {
-    if (article.isConnected) return
-    document.removeEventListener("astro:after-swap", dispose)
+  return () => {
     observer.disconnect()
     if (frame) cancelAnimationFrame(frame)
     restore()
@@ -417,5 +415,4 @@ export function enhanceSidenotes(article: HTMLElement) {
     }
     delete article.dataset.enhanced
   }
-  document.addEventListener("astro:after-swap", dispose)
 }

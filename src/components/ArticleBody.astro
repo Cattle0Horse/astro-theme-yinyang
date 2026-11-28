@@ -6,9 +6,9 @@ import { entryPath, entryTitle } from "../lib/content"
 import { articleMarkup, articleScope } from "../lib/markup"
 import ArticleToc from "./ArticleToc.astro"
 import ReadingActions from "./ReadingActions.astro"
-import { enhanceSidenotes } from "../lib/sidenotes-reader"
-import { animateCodeHeight, startCodeFolds } from "../lib/code-block"
-import { startImageLoading } from "../lib/image-reader"
+import sidenotesScript from "../lib/reading-sidenotes.client.ts?inline-reading"
+import codeFoldsScript from "../lib/reading-code.client.ts?inline-reading"
+import imagesScript from "../lib/reading-images.client.ts?inline-reading"
 
 interface Props {
   entry: Entry
@@ -31,6 +31,7 @@ const article = articleMarkup((await Astro.slots.render("default")) ?? "", canon
   data-reading-actions={article.hasReadingActions ? "" : undefined}
   data-has-sidenotes={article.hasSidenotes ? "" : undefined}
   data-has-images={article.hasImages ? "" : undefined}
+  data-has-code-folds={article.hasCodeFolds ? "" : undefined}
 >
   <Fragment set:html={article.html} />
   {article.hasImages && (
@@ -42,21 +43,6 @@ const article = articleMarkup((await Astro.slots.render("default")) ?? "", canon
     </template>
   )}
 </div>
-{article.hasSidenotes && (
-  <script
-    is:inline
-    set:html={`(() => {
-    const installed = Symbol.for("yinyang.sidenotes");
-    if (Reflect.get(document, installed)) return;
-    Reflect.set(document, installed, true);
-    const enhance = ${enhanceSidenotes.toString()};
-    document.addEventListener("yinyang:reading", event => { if (event.target.hasAttribute("data-has-sidenotes")) enhance(event.target) });
-    document.addEventListener("astro:after-swap", () => document.querySelectorAll("[data-has-sidenotes]").forEach(enhance));
-  })()`}
-  ></script>
-)}
-{article.hasCodeFolds && <script is:inline set:html={`(${startCodeFolds.toString()})(${animateCodeHeight.toString()})`}></script>}
-{article.hasImages && <script is:inline set:html={"(" + startImageLoading.toString() + ")()"}></script>}
-{(article.hasSidenotes || article.hasCodeFolds || article.hasImages) && <script is:inline data-astro-rerun define:vars={{ scope }}>
-  document.getElementById(scope)?.dispatchEvent(new Event("yinyang:reading", { bubbles: true }))
-</script>}
+{article.hasSidenotes && <script is:inline set:html={sidenotesScript}></script>}
+{article.hasCodeFolds && <script is:inline set:html={codeFoldsScript}></script>}
+{article.hasImages && <script is:inline set:html={imagesScript}></script>}

@@ -66,10 +66,11 @@ test("only pages with the corresponding reading feature include its bootstrap", 
   const fallback = await file("404.html")
   const code = await file("posts/syntax-highlighting-test/index.html")
   const sidenotes = await file("posts/sidenote-demo/index.html")
-  for (const html of [homepage, fallback]) assert.doesNotMatch(html, /yinyang\.(sidenotes|code-folds)/u)
-  assert.match(code, /yinyang\.code-folds/u)
-  assert.doesNotMatch(code, /yinyang\.sidenotes/u)
-  assert.match(sidenotes, /yinyang\.sidenotes/u)
+  const inlineScripts = (html: string) => [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/gu)].map((match) => match[1]).join("\n")
+  for (const html of [homepage, fallback]) assert.doesNotMatch(inlineScripts(html), /\[data-has-(sidenotes|code-folds)\]/u)
+  assert.match(inlineScripts(code), /\[data-has-code-folds\]/u)
+  assert.doesNotMatch(inlineScripts(code), /\[data-has-sidenotes\]/u)
+  assert.match(inlineScripts(sidenotes), /\[data-has-sidenotes\]/u)
 })
 
 test("keeps Blog and Notes feeds separate and scopes repeated Notes IDs", async () => {

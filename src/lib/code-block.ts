@@ -1,6 +1,5 @@
 export const codeFoldThreshold = 15
 
-// This function also runs in the inline fold bootstrap before the reader hydrates.
 export function animateCodeHeight(pre: HTMLElement, update: () => void, duration: number) {
   const height = pre.getBoundingClientRect().height
   const fold = pre.parentElement?.querySelector<HTMLElement>(":scope > [data-code-fold]")
@@ -28,10 +27,8 @@ export function animateCodeHeight(pre: HTMLElement, update: () => void, duration
   void animation.finished.then(clean, clean)
 }
 
-export function startCodeFolds(animateHeight: typeof animateCodeHeight) {
-  const installed = Symbol.for("yinyang.code-folds")
-  if (Reflect.get(document, installed)) return
-  Reflect.set(document, installed, true)
+export function mountCodeFolds(article: HTMLElement) {
+  const controller = new AbortController()
 
   function apply(pre: Element, collapsed: boolean) {
     const button = pre.parentElement?.querySelector<HTMLButtonElement>("[data-code-fold] > button")
@@ -43,32 +40,29 @@ export function startCodeFolds(animateHeight: typeof animateCodeHeight) {
     if (label) label.textContent = collapsed ? "展开全部 (" + button.dataset.codeLines + " 行)" : "收起代码"
   }
 
-  function restore() {
-    const open = history.state?.yinyangExpandedCode
-    if (!open || typeof open !== "object") return
-    document.querySelectorAll(".reading[id]").forEach((article) => {
-      const indexes = open[article.id]
-      if (!Array.isArray(indexes)) return
-      article.querySelectorAll("[data-code-index]").forEach((pre) => {
-        if (indexes.includes(Number(pre.getAttribute("data-code-index")))) apply(pre, false)
-      })
+  const saved = history.state?.yinyangExpandedCode?.[article.id]
+  if (Array.isArray(saved)) {
+    article.querySelectorAll("[data-code-index]").forEach((pre) => {
+      if (saved.includes(Number(pre.getAttribute("data-code-index")))) apply(pre, false)
     })
   }
 
-  document.addEventListener("astro:after-swap", restore)
-  document.addEventListener("yinyang:reading", restore)
-  document.addEventListener("click", (event) => {
-    const button = event.target instanceof Element ? event.target.closest("[data-code-fold] > button") : null
-    const article = button?.closest(".reading")
-    const pre = button?.closest("[data-code-block]")?.querySelector<HTMLPreElement>(":scope > pre")
-    if (!article || !pre) return
-    const index = Number(pre.getAttribute("data-code-index"))
-    const collapsed = !pre.hasAttribute("data-collapsed")
-    const open = history.state?.yinyangExpandedCode
-    const indexes: number[] = Array.isArray(open?.[article.id]) ? open[article.id] : []
-    const next = indexes.filter((value) => value !== index)
-    if (!collapsed) next.push(index)
-    history.replaceState({ ...history.state, yinyangExpandedCode: { ...open, [article.id]: next } }, "")
-    animateHeight(pre, () => apply(pre, collapsed), 360)
-  })
+  article.addEventListener(
+    "click",
+    (event) => {
+      const button = event.target instanceof Element ? event.target.closest("[data-code-fold] > button") : null
+      const pre = button?.closest("[data-code-block]")?.querySelector<HTMLPreElement>(":scope > pre")
+      if (!pre) return
+      const index = Number(pre.getAttribute("data-code-index"))
+      const collapsed = !pre.hasAttribute("data-collapsed")
+      const open = history.state?.yinyangExpandedCode
+      const indexes: number[] = Array.isArray(open?.[article.id]) ? open[article.id] : []
+      const next = indexes.filter((value) => value !== index)
+      if (!collapsed) next.push(index)
+      history.replaceState({ ...history.state, yinyangExpandedCode: { ...open, [article.id]: next } }, "")
+      animateCodeHeight(pre, () => apply(pre, collapsed), 360)
+    },
+    { signal: controller.signal }
+  )
+  return () => controller.abort()
 }

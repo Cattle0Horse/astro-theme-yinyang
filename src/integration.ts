@@ -10,6 +10,7 @@ import { remarkLegacyMath } from "./lib/markdown/legacy-math.ts"
 import { remarkSidenotes } from "./lib/markdown/sidenotes.ts"
 import { rehypeReading } from "./lib/markdown/reading.ts"
 import { remarkTableSource } from "./lib/markdown/tables.ts"
+import { inlineReading } from "./lib/inline-reading.ts"
 import type { ThemeOptions } from "./site.config.ts"
 
 export type { ThemeOptions } from "./site.config.ts"
@@ -51,6 +52,7 @@ export default function yinyang(options: ThemeOptions = {}): AstroIntegration[] 
             build: { format: "directory" },
             vite: {
               plugins: [
+                inlineReading(),
                 {
                   name: "yinyang:astro-transition-styles",
                   enforce: "pre",

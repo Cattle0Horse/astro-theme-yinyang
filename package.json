@@ -16,6 +16,7 @@
     "src/lib",
     "src/routes",
     "src/styles",
+    "src/inline-reading.d.ts",
     "src/collections.ts",
     "src/integration.ts",
     "src/site.config.ts"
@@ -58,6 +59,7 @@
     "micromark-util-symbol": "^2.0.1",
     "rehype-katex": "^7.0.1",
     "remark-math": "^6.0.0",
+    "rolldown": "^1.3.3",
     "tailwindcss": "^4.3.5",
     "unist-util-visit": "^5.2.0"
   },
